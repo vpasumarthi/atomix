@@ -278,8 +278,8 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
 
 ### Next Steps
 - CP2KCalculator implementation
-- Workflow.run() implementation with actual job execution
 - Ensemble model uncertainty in CLI commands
+- NEB and frequency calculation implementations (currently stubs)
 
 ## Environment Notes
 
