@@ -6,6 +6,8 @@ from typing import Any
 
 from ase import Atoms
 
+from atomix.calculators.vasp import VASPCalculator
+
 
 class BaseCalculation(ABC):
     """Abstract base class for all calculation types.
@@ -55,8 +57,19 @@ class BaseCalculation(ABC):
 class StaticCalculation(BaseCalculation):
     """Single-point energy calculation."""
 
-    def setup(self) -> None:
-        raise NotImplementedError
+    calc_type = "static"
+
+    def setup(self) -> dict[str, Path]:
+        """Set up VASP input files for static calculation.
+
+        Returns
+        -------
+        dict[str, Path]
+            Paths to generated input files.
+        """
+        kpoints = self.parameters.pop("kpoints", None)
+        calculator = VASPCalculator(self.directory, **self.parameters)
+        return calculator.write_inputs(self.atoms, self.calc_type, kpoints=kpoints)
 
     def run(self) -> None:
         raise NotImplementedError
@@ -68,8 +81,19 @@ class StaticCalculation(BaseCalculation):
 class RelaxCalculation(BaseCalculation):
     """Geometry optimization calculation."""
 
-    def setup(self) -> None:
-        raise NotImplementedError
+    calc_type = "relax"
+
+    def setup(self) -> dict[str, Path]:
+        """Set up VASP input files for relaxation calculation.
+
+        Returns
+        -------
+        dict[str, Path]
+            Paths to generated input files.
+        """
+        kpoints = self.parameters.pop("kpoints", None)
+        calculator = VASPCalculator(self.directory, **self.parameters)
+        return calculator.write_inputs(self.atoms, self.calc_type, kpoints=kpoints)
 
     def run(self) -> None:
         raise NotImplementedError

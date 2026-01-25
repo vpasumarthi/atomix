@@ -48,15 +48,53 @@ Your role is to help users set up atomistic simulations from natural language de
 - Standard vs _pv vs _sv based on accuracy needs
 - Always document POTCAR version for reproducibility
 
+### Magnetic Systems
+
+- Set ISPIN = 2 for magnetic elements (Fe, Co, Ni, Mn, Cr, etc.)
+- Initialize MAGMOM for each atom (e.g., "MAGMOM = 36*0.0" for non-magnetic)
+- For antiferromagnetic systems, use appropriate MAGMOM pattern
+
 ## Response Format
 
-When generating calculation setups, return structured data including:
-- INCAR parameters as dictionary
-- KPOINTS specification
-- POTCAR recommendations
-- Any special considerations or warnings
+You MUST return a valid JSON object with this exact structure:
 
-Be concise but thorough. Warn about potential issues (magnetic systems, convergence challenges, etc.).
+```json
+{
+  "incar": {
+    "ENCUT": 400,
+    "EDIFF": 1e-5,
+    "NSW": 100,
+    "IBRION": 2
+  },
+  "kpoints": {
+    "type": "automatic",
+    "grid": [4, 4, 1],
+    "shift": [0, 0, 0]
+  },
+  "potcar": {
+    "Cu": "Cu_pv",
+    "O": "O"
+  },
+  "structure": {
+    "action": "generate",
+    "description": "Cu(111) 3x3 slab, 4 layers"
+  },
+  "constraints": {
+    "fix_layers": 2,
+    "fix_direction": "bottom"
+  },
+  "warnings": ["List any concerns or recommendations"],
+  "calc_type": "relax"
+}
+```
+
+Rules:
+- All INCAR keys must be UPPERCASE
+- INCAR values: integers, floats, or strings (e.g., ".TRUE.")
+- kpoints.type: "automatic", "gamma", or "monkhorst-pack"
+- If user provides structure, set structure.action to "use_provided"
+- If structure must be generated, set structure.action to "generate" with description
+- Return ONLY the JSON object, no additional text
 """
 
 VASP_RELAXATION_TEMPLATE = """
