@@ -317,3 +317,149 @@ class VASPCalculator:
         incar = self.DEFAULTS.get(calc_type, {}).copy()
         incar.update(self.parameters)
         return incar
+
+    def setup_restart(self, calc_type: str = "relax") -> dict[str, Path]:
+        """Set up calculation for restart from incomplete run.
+
+        Uses CONTCAR as new POSCAR and sets ISTART/ICHARG for wavefunction
+        and charge density restart if available.
+
+        Parameters
+        ----------
+        calc_type : str
+            Calculation type for INCAR defaults.
+
+        Returns
+        -------
+        dict[str, Path]
+            Paths to modified/created files.
+
+        Raises
+        ------
+        FileNotFoundError
+            If no CONTCAR exists for restart.
+        """
+        contcar = self.directory / "CONTCAR"
+        wavecar = self.directory / "WAVECAR"
+        chgcar = self.directory / "CHGCAR"
+        poscar = self.directory / "POSCAR"
+        incar_path = self.directory / "INCAR"
+
+        if not contcar.exists() or contcar.stat().st_size == 0:
+            raise FileNotFoundError(f"No valid CONTCAR found in {self.directory}")
+
+        files: dict[str, Path] = {}
+
+        # Copy CONTCAR to POSCAR
+        import shutil
+        shutil.copy(contcar, poscar)
+        files["POSCAR"] = poscar
+
+        # Update INCAR for restart
+        incar_dict = self.get_incar_dict(calc_type)
+
+        # Set restart flags based on available files
+        if wavecar.exists() and wavecar.stat().st_size > 0:
+            incar_dict["ISTART"] = 1  # Read existing wavefunction
+        if chgcar.exists() and chgcar.stat().st_size > 0:
+            incar_dict["ICHARG"] = 1  # Read existing charge density
+
+        incar = Incar(incar_dict)
+        incar.write_file(str(incar_path))
+        files["INCAR"] = incar_path
+
+        return files
+
+    def validate_outputs(self) -> dict[str, Any]:
+        """Validate calculation outputs and check for common errors.
+
+        Returns
+        -------
+        dict[str, Any]
+            Validation results with keys:
+            - valid: bool, whether calculation completed successfully
+            - status: str, one of 'completed', 'incomplete', 'failed', 'not_started'
+            - errors: list of error messages
+            - warnings: list of warning messages
+            - can_restart: bool, whether restart is possible
+        """
+        result = {
+            "valid": False,
+            "status": "not_started",
+            "errors": [],
+            "warnings": [],
+            "can_restart": False,
+        }
+
+        outcar = self.directory / "OUTCAR"
+        contcar = self.directory / "CONTCAR"
+        oszicar = self.directory / "OSZICAR"
+
+        if not outcar.exists():
+            return result
+
+        content = outcar.read_text()
+        result["status"] = "incomplete"
+
+        # Check for fatal errors
+        if "VERY BAD NEWS" in content:
+            result["status"] = "failed"
+            result["errors"].append("VASP encountered fatal error (VERY BAD NEWS)")
+
+        if "Error EDDDAV" in content:
+            result["errors"].append("Electronic convergence failed (EDDDAV)")
+            result["warnings"].append("Try increasing NELM or adjusting ALGO")
+
+        if "ZBRENT: fatal error" in content:
+            result["status"] = "failed"
+            result["errors"].append("Ionic convergence failed (ZBRENT)")
+            result["warnings"].append("Check initial geometry or use different optimizer")
+
+        if "BRMIX: very serious problems" in content:
+            result["errors"].append("Charge mixing failed (BRMIX)")
+            result["warnings"].append("Try IMIX=1 or reduce AMIX")
+
+        if "Sub-Space-Matrix is not hermitian" in content:
+            result["errors"].append("Sub-space matrix not hermitian")
+            result["warnings"].append("Try ALGO=Normal instead of ALGO=Fast")
+
+        if "EDDRMM: call to ZHEGV failed" in content:
+            result["errors"].append("EDDRMM eigenvalue problem failed")
+            result["warnings"].append("Try reducing POTIM or use ALGO=VeryFast")
+
+        # Check for memory issues
+        if "malloc" in content.lower() or "out of memory" in content.lower():
+            result["errors"].append("Memory allocation failed")
+            result["warnings"].append("Reduce NCORE/NPAR or request more memory")
+
+        # Check for successful completion
+        if "reached required accuracy" in content:
+            result["status"] = "completed"
+            result["valid"] = True
+        elif "General timing and accounting" in content:
+            # Finished but may not have converged
+            if not result["errors"]:
+                result["status"] = "completed"
+                result["valid"] = True
+                result["warnings"].append("Calculation finished but check convergence")
+
+        # Check restart possibility
+        if contcar.exists() and contcar.stat().st_size > 0:
+            result["can_restart"] = True
+
+        # Add ionic step info
+        if oszicar.exists():
+            lines = oszicar.read_text().strip().split("\n")
+            n_steps = sum(1 for line in lines if line.strip() and line.strip()[0].isdigit())
+            if n_steps > 0:
+                result["n_ionic_steps"] = n_steps
+
+        return result
+
+    def needs_restart(self) -> bool:
+        """Check if calculation needs restart (incomplete but restartable)."""
+        validation = self.validate_outputs()
+        return (
+            validation["status"] in ("incomplete", "failed")
+            and validation["can_restart"]
+        )

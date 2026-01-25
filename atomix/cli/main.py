@@ -375,6 +375,87 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
 
 
 @cli.command()
+@click.argument("directory", type=click.Path(exists=True), default=".")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def validate(directory: str, as_json: bool) -> None:
+    """Validate calculation outputs and check for errors.
+
+    Checks for common VASP errors and provides recommendations.
+    """
+    import json
+
+    from atomix.calculators.vasp import VASPCalculator
+
+    calc = VASPCalculator(directory)
+    result = calc.validate_outputs()
+
+    if as_json:
+        click.echo(json.dumps(result, indent=2))
+        return
+
+    click.echo(f"\n=== Validation: {directory} ===\n")
+    click.echo(f"  Status: {result['status'].upper()}")
+    click.echo(f"  Valid: {'Yes' if result['valid'] else 'No'}")
+    click.echo(f"  Can restart: {'Yes' if result['can_restart'] else 'No'}")
+
+    if "n_ionic_steps" in result:
+        click.echo(f"  Ionic steps completed: {result['n_ionic_steps']}")
+
+    if result["errors"]:
+        click.echo("\n  Errors:")
+        for err in result["errors"]:
+            click.echo(f"    - {err}")
+
+    if result["warnings"]:
+        click.echo("\n  Recommendations:")
+        for warn in result["warnings"]:
+            click.echo(f"    - {warn}")
+
+
+@cli.command()
+@click.argument("directory", type=click.Path(exists=True), default=".")
+@click.option("--type", "-t", "calc_type", default="relax", help="Calculation type for INCAR")
+def restart(directory: str, calc_type: str) -> None:
+    """Set up calculation for restart from incomplete run.
+
+    Copies CONTCAR to POSCAR and sets ISTART/ICHARG based on
+    available WAVECAR/CHGCAR files.
+    """
+    from atomix.calculators.vasp import VASPCalculator
+
+    calc = VASPCalculator(directory)
+
+    # First validate
+    validation = calc.validate_outputs()
+    if validation["status"] == "completed" and validation["valid"]:
+        click.echo("Calculation already completed successfully.")
+        return
+
+    if not validation["can_restart"]:
+        click.echo("Cannot restart: no valid CONTCAR found.", err=True)
+        raise click.Abort()
+
+    try:
+        files = calc.setup_restart(calc_type)
+        click.echo(f"Restart setup complete in {directory}/")
+        for name, path in files.items():
+            click.echo(f"  - Updated {name}")
+
+        # Show what restart settings were applied
+        incar_path = Path(directory) / "INCAR"
+        if incar_path.exists():
+            content = incar_path.read_text()
+            if "ISTART" in content:
+                click.echo("\n  WAVECAR restart enabled (ISTART=1)")
+            if "ICHARG" in content:
+                click.echo("  CHGCAR restart enabled (ICHARG=1)")
+
+    except FileNotFoundError as e:
+        click.echo(f"Restart failed: {e}", err=True)
+        raise click.Abort()
+
+
+@cli.command()
 @click.option("--output", "-o", type=click.Path(), default="atomix.yaml", help="Config file path")
 def init(output: str) -> None:
     """Initialize atomix configuration file."""
