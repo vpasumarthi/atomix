@@ -21,6 +21,19 @@ class Config:
             "default_functional": "PBE",
             "default_encut": 400,
         },
+        "mlip": {
+            "default_calculator": "mace",
+            "mace": {
+                "model": "medium",
+                "device": "cpu",
+                "default_dtype": "float64",
+                "dispersion": False,
+            },
+            "nequip": {
+                "device": "cpu",
+                "default_dtype": "float64",
+            },
+        },
         "slurm": {
             "partition": None,
             "nodes": 1,

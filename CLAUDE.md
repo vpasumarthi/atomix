@@ -110,7 +110,7 @@ atomix focuses on NL interface + workflow orchestration. Delegate to established
 | CLI | Click or Typer | Modern Python CLI |
 | Config | YAML | Human-readable, ASE-compatible |
 
-## File Structure (Proposed)
+## File Structure
 
 ```
 atomix/
@@ -119,11 +119,14 @@ atomix/
 │   ├── core/
 │   │   ├── calculation.py      # Base calculation classes
 │   │   ├── workflow.py         # Workflow orchestration
-│   │   └── config.py           # Configuration handling
+│   │   ├── config.py           # Configuration handling
+│   │   ├── jobs.py             # Job submission (SLURM, PBS, local)
+│   │   ├── screening.py        # MLIP screening workflows
+│   │   └── active_learning.py  # Training data generation helpers
 │   ├── calculators/
 │   │   ├── vasp.py             # VASP-specific logic
-│   │   ├── cp2k.py             # CP2K support
-│   │   └── mlip.py             # MLIP wrappers
+│   │   ├── mlip.py             # MLIP wrappers (MACE, NequIP)
+│   │   └── cp2k.py             # CP2K support (planned)
 │   ├── analysis/
 │   │   ├── energy.py           # Energy analysis
 │   │   ├── trajectory.py       # MD trajectory analysis
@@ -144,6 +147,10 @@ atomix/
 │   ├── cu111_relaxation/
 │   └── o_adsorption/
 ├── tests/
+│   ├── test_core.py            # Config tests
+│   ├── test_analysis.py        # Trajectory/energy analysis tests
+│   ├── test_adsorption.py      # Adsorption workflow tests
+│   └── test_mlip.py            # MLIP calculator/screening tests
 ├── docs/
 ├── CLAUDE.md                   # This file (for Claude Code)
 ├── pyproject.toml
@@ -253,11 +260,26 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
   - Formation energy calculations
   - CLI: `atomix adsorption`, `atomix sites`
 
-### Next: Phase 4 - MLIP Integration
-Focus areas:
-1. Drop-in calculator replacement (MACECalculator)
-2. Screening workflows (MLIP fast scan → DFT validation)
-3. Active learning data generation helpers
+- **Phase 4**: MLIP Integration ✓
+  - MACECalculator and NequIPCalculator - drop-in replacements for VASPCalculator
+  - Foundation model support (MACE-MP small/medium/large, MACE-OFF)
+  - ScreeningWorkflow for MLIP fast scan → DFT validation
+  - AdsorptionScreening for site enumeration with MLIP
+  - Active learning helpers:
+    - TrainingDataExporter (extended XYZ, ASE database)
+    - UncertaintyEstimator (ensemble disagreement)
+    - ActiveLearningSelector (uncertainty sampling, diversity selection)
+  - Configuration: `config.get("mlip", "mace", "model")` etc.
+
+### Next Steps
+- CLI commands for MLIP workflows (`atomix screen`, `atomix train-data`)
+- CP2KCalculator implementation
+- Workflow.run() implementation with actual job execution
+
+## Environment Notes
+
+- User shell: bash (use `~/.bashrc`, not `~/.zshrc`)
+- Conda environment: `atomix`
 
 ## Getting Started Commands
 
