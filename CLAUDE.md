@@ -92,12 +92,19 @@ BaseSite (for catalysis)
 - Structure-aware context injection
 - Validation of generated scripts before execution
 
+### 4. Delegate Low-Level I/O
+atomix focuses on NL interface + workflow orchestration. Delegate to established libraries:
+- **pymatgen**: VASP I/O (Incar, Poscar, Kpoints, Vasprun, Outcar)
+- **ASE**: Structure manipulation, format conversion
+- Don't reimplement what these libraries do well
+
 ## Technology Stack
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
 | Structure handling | ASE | Industry standard, broad format support |
-| DFT interface | pymatgen + custodian (optional) | Robust VASP handling |
+| DFT I/O | pymatgen | Robust VASP input/output parsing |
+| Error recovery | custodian (optional) | Automatic job fixing/restarting |
 | MLIP | MACE (mace-torch) | Pretrained foundation models available |
 | LLM API | OpenAI / Anthropic / local (ollama) | Flexible provider |
 | CLI | Click or Typer | Modern Python CLI |
@@ -217,6 +224,8 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
 ## What NOT to Build
 
 - Custom DFT engine (use existing codes)
+- Custom VASP I/O parsing (use pymatgen)
+- Custom structure file writers (use ASE/pymatgen)
 - Complex GUI (CLI + NL interface is enough)
 - Database system (use existing: ASE db, pymatgen)
 - Workflow scheduler (use existing: FireWorks, AiiDA if needed)
