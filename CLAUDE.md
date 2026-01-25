@@ -230,21 +230,45 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
 - Database system (use existing: ASE db, pymatgen)
 - Workflow scheduler (use existing: FireWorks, AiiDA if needed)
 
+## Current Status
+
+### Completed
+- **Phase 1**: Natural Language → Simulation Setup ✓
+  - NLGenerator with Anthropic/OpenAI support
+  - System prompt with VASP conventions
+  - CLI: `atomix generate`
+
+- **Phase 2**: Calculation Management ✓
+  - VASPCalculator with pymatgen I/O
+  - Job submission (SLURM, PBS, local)
+  - Output parsing and validation
+  - Restart handling for incomplete calculations
+  - CLI: `submit`, `status`, `analyze`, `validate`, `restart`
+
+### Next: Phase 3 - Analysis Pipeline
+Focus areas:
+1. Adsorption energy workflows (E_ads calculation)
+2. Site enumeration (top, bridge, hollow)
+3. Reference calculations (gas-phase adsorbates)
+4. Batch analysis across directories
+
+Key files to implement/extend:
+- `atomix/analysis/adsorption.py` - AdsorptionAnalyzer class
+- `atomix/sites/surface.py` - SurfaceSite identification
+- CLI command: `atomix adsorption`
+
 ## Getting Started Commands
 
 ```bash
-# Create new repo
-mkdir atomix && cd atomix
-git init
+# Project is set up - activate environment
+conda activate atomix
 
-# Copy this CLAUDE.md to root
-# Then start Claude Code session
+# Run tests
+pytest tests/
 
-# Initial setup tasks:
-# 1. Create pyproject.toml with dependencies
-# 2. Create basic package structure
-# 3. Implement VASPCalculation base class
-# 4. Add NL generator with system prompt
+# Try CLI
+atomix --help
+atomix generate "Static calculation of bulk Cu" --dry-run
 ```
 
 ## References & Inspiration
