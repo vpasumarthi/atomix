@@ -75,7 +75,16 @@ class StaticCalculation(BaseCalculation):
         raise NotImplementedError
 
     def parse_results(self) -> dict[str, Any]:
-        raise NotImplementedError
+        """Parse static calculation results.
+
+        Returns
+        -------
+        dict[str, Any]
+            Results including energy, forces, stress.
+        """
+        calculator = VASPCalculator(self.directory)
+        self._results = calculator.read_outputs()
+        return self._results
 
 
 class RelaxCalculation(BaseCalculation):
@@ -99,7 +108,21 @@ class RelaxCalculation(BaseCalculation):
         raise NotImplementedError
 
     def parse_results(self) -> dict[str, Any]:
-        raise NotImplementedError
+        """Parse relaxation calculation results.
+
+        Returns
+        -------
+        dict[str, Any]
+            Results including final energy, structure, trajectory.
+        """
+        calculator = VASPCalculator(self.directory)
+        self._results = calculator.read_outputs()
+
+        # Update atoms with final structure
+        if self._results.get("atoms") is not None:
+            self.atoms = self._results["atoms"]
+
+        return self._results
 
 
 class AIMDCalculation(BaseCalculation):

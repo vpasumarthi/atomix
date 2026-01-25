@@ -244,11 +244,134 @@ def status(directory: str, job_id: str | None, scheduler: str) -> None:
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True), default=".")
-@click.option("--type", "-t", "calc_type", default="energy", help="Analysis type")
-def analyze(directory: str, calc_type: str) -> None:
-    """Analyze calculation outputs."""
-    click.echo(f"Analyzing {calc_type} in: {directory}")
-    click.echo("(Not yet implemented)")
+@click.option("--type", "-t", "calc_type", default="summary", help="Analysis type: summary, energy, forces, trajectory")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def analyze(directory: str, calc_type: str, as_json: bool) -> None:
+    """Analyze calculation outputs.
+
+    Analysis types:
+      summary    - Overview of calculation results (default)
+      energy     - Energy values and convergence
+      forces     - Force analysis and max force
+      trajectory - Relaxation/MD trajectory info
+    """
+    import json
+
+    from atomix.calculators.vasp import VASPCalculator
+
+    calc = VASPCalculator(directory)
+
+    # Check if outputs exist
+    outcar = Path(directory) / "OUTCAR"
+    if not outcar.exists():
+        click.echo(f"No OUTCAR found in {directory}", err=True)
+        raise click.Abort()
+
+    # Parse outputs
+    try:
+        results = calc.read_outputs()
+    except Exception as e:
+        click.echo(f"Error parsing outputs: {e}", err=True)
+        raise click.Abort()
+
+    if as_json:
+        # Convert numpy arrays to lists for JSON serialization
+        json_results = {}
+        for key, value in results.items():
+            if hasattr(value, "tolist"):
+                json_results[key] = value.tolist()
+            elif key == "atoms" and value is not None:
+                json_results[key] = {
+                    "formula": value.get_chemical_formula(),
+                    "n_atoms": len(value),
+                }
+            elif key == "trajectory":
+                json_results[key] = [
+                    {"formula": a.get_chemical_formula(), "n_atoms": len(a)}
+                    for a in value
+                ]
+            else:
+                json_results[key] = value
+        click.echo(json.dumps(json_results, indent=2))
+        return
+
+    # Display based on analysis type
+    if calc_type == "summary":
+        click.echo(f"\n=== Calculation Summary: {directory} ===\n")
+        click.echo(f"  Converged: {'Yes' if results['converged'] else 'No'}")
+        if results["energy"] is not None:
+            click.echo(f"  Energy: {results['energy']:.6f} eV")
+        click.echo(f"  Ionic steps: {results['n_steps']}")
+
+        if results["atoms"] is not None:
+            atoms = results["atoms"]
+            click.echo(f"  Final structure: {len(atoms)} atoms, {atoms.get_chemical_formula()}")
+
+        if results["forces"] is not None:
+            import numpy as np
+            max_force = np.max(np.abs(results["forces"]))
+            click.echo(f"  Max force: {max_force:.4f} eV/Å")
+
+        if results["errors"]:
+            click.echo("\n  Errors:")
+            for err in results["errors"]:
+                click.echo(f"    - {err}")
+
+        if results["warnings"]:
+            click.echo("\n  Warnings:")
+            for warn in results["warnings"]:
+                click.echo(f"    - {warn}")
+
+    elif calc_type == "energy":
+        click.echo(f"\n=== Energy Analysis: {directory} ===\n")
+        if results["energy"] is not None:
+            click.echo(f"  Total energy: {results['energy']:.6f} eV")
+            if results["atoms"] is not None:
+                e_per_atom = results["energy"] / len(results["atoms"])
+                click.echo(f"  Energy/atom: {e_per_atom:.6f} eV")
+        else:
+            click.echo("  No energy found in outputs")
+
+    elif calc_type == "forces":
+        click.echo(f"\n=== Force Analysis: {directory} ===\n")
+        if results["forces"] is not None:
+            import numpy as np
+            forces = results["forces"]
+            force_mags = np.linalg.norm(forces, axis=1)
+            click.echo(f"  Number of atoms: {len(forces)}")
+            click.echo(f"  Max force: {np.max(force_mags):.6f} eV/Å")
+            click.echo(f"  Mean force: {np.mean(force_mags):.6f} eV/Å")
+            click.echo(f"  RMS force: {np.sqrt(np.mean(force_mags**2)):.6f} eV/Å")
+
+            # Show atoms with largest forces
+            max_idx = np.argmax(force_mags)
+            click.echo(f"\n  Largest force on atom {max_idx}: {force_mags[max_idx]:.6f} eV/Å")
+        else:
+            click.echo("  No forces found in outputs")
+
+    elif calc_type == "trajectory":
+        click.echo(f"\n=== Trajectory Analysis: {directory} ===\n")
+        traj = results.get("trajectory", [])
+        if traj:
+            click.echo(f"  Number of frames: {len(traj)}")
+            # Show energy progression if available
+            energies = []
+            for atoms in traj:
+                if atoms.calc is not None:
+                    try:
+                        energies.append(atoms.get_potential_energy())
+                    except Exception:
+                        pass
+            if energies:
+                click.echo(f"  Initial energy: {energies[0]:.6f} eV")
+                click.echo(f"  Final energy: {energies[-1]:.6f} eV")
+                click.echo(f"  Energy change: {energies[-1] - energies[0]:.6f} eV")
+        else:
+            click.echo("  No trajectory found (try reading XDATCAR or vasprun.xml)")
+
+    else:
+        click.echo(f"Unknown analysis type: {calc_type}", err=True)
+        click.echo("Available types: summary, energy, forces, trajectory")
 
 
 @cli.command()
