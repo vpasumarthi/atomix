@@ -684,5 +684,440 @@ def sites(
         click.echo(f"\nStructures saved to {output}/")
 
 
+@cli.command()
+@click.argument("structures", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option("--calculator", "-c", default="mace", help="MLIP calculator: mace, nequip")
+@click.option("--model", "-m", default="medium", help="Model name or path")
+@click.option("--device", "-d", default="cpu", help="Device: cpu, cuda, mps")
+@click.option("--top-n", "-n", default=10, help="Number of top structures to select")
+@click.option("--energy-window", "-w", type=float, help="Energy window from min (eV)")
+@click.option("--output", "-o", type=click.Path(), help="Output directory for selected structures")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def screen(
+    structures: tuple[str, ...],
+    calculator: str,
+    model: str,
+    device: str,
+    top_n: int,
+    energy_window: float | None,
+    output: str | None,
+    as_json: bool,
+) -> None:
+    """Screen structures with MLIP for fast energy ranking.
+
+    Rapidly evaluate candidate structures using machine learning potentials
+    to identify promising configurations for DFT validation.
+
+    Examples:
+        # Screen structures with MACE foundation model
+        atomix screen ./struct_*.vasp -c mace -m medium -n 5
+
+        # Screen with energy window selection
+        atomix screen ./candidates/ -w 0.5 --json
+
+        # Save selected structures
+        atomix screen ./site_*.cif -n 10 -o ./selected/
+    """
+    import json
+    from pathlib import Path
+
+    from ase.io import read as ase_read
+    from ase.io import write as ase_write
+
+    from atomix.calculators.mlip import get_mlip_calculator
+    from atomix.core.screening import ScreeningConfig, ScreeningWorkflow
+
+    # Load structures
+    atoms_list = []
+    file_names = []
+    for struct_path in structures:
+        path = Path(struct_path)
+        if path.is_dir():
+            # Try to find structure files in directory
+            for ext in ["POSCAR", "CONTCAR", "*.vasp", "*.cif", "*.xyz"]:
+                files = list(path.glob(ext))
+                for f in files:
+                    try:
+                        atoms = ase_read(str(f))
+                        atoms_list.append(atoms)
+                        file_names.append(str(f))
+                    except Exception:
+                        pass
+        else:
+            try:
+                atoms = ase_read(str(path))
+                atoms_list.append(atoms)
+                file_names.append(str(path))
+            except Exception as e:
+                click.echo(f"Warning: Could not read {path}: {e}", err=True)
+
+    if not atoms_list:
+        click.echo("No valid structures found", err=True)
+        raise click.Abort()
+
+    click.echo(f"Loaded {len(atoms_list)} structures")
+
+    # Initialize calculator
+    try:
+        if Path(model).exists():
+            # Custom model path
+            mlip = get_mlip_calculator(calculator, model_path=model, device=device)
+        else:
+            # Foundation model name
+            mlip = get_mlip_calculator(calculator, model=model, device=device)
+    except ImportError as e:
+        click.echo(f"Error: {e}", err=True)
+        click.echo("Install MLIP dependencies: pip install atomix[mlip]", err=True)
+        raise click.Abort()
+
+    # Configure screening
+    config = ScreeningConfig(
+        top_n=top_n,
+        energy_window=energy_window,
+    )
+
+    # Run screening
+    click.echo(f"Screening with {calculator} ({model}) on {device}...")
+    workflow = ScreeningWorkflow(mlip, config)
+    metadata = [{"filename": f} for f in file_names]
+    results = workflow.screen(atoms_list, metadata)
+
+    if as_json:
+        json_results = []
+        for r in results:
+            json_results.append({
+                "rank": r.rank,
+                "filename": r.metadata.get("filename", ""),
+                "energy": r.mlip_energy,
+                "selected": r.selected_for_dft,
+                "n_atoms": len(r.atoms),
+                "formula": r.atoms.get_chemical_formula(),
+            })
+        click.echo(json.dumps(json_results, indent=2))
+        return
+
+    # Display results
+    selected = workflow.get_selected()
+    click.echo(f"\n=== Screening Results ({len(results)} structures) ===\n")
+    click.echo(f"  {'Rank':<6} {'Energy (eV)':<14} {'Formula':<20} {'File'}")
+    click.echo("  " + "-" * 70)
+
+    for r in results[:20]:  # Show top 20
+        marker = "*" if r.selected_for_dft else " "
+        fname = Path(r.metadata.get("filename", "")).name[:25]
+        formula = r.atoms.get_chemical_formula()[:18]
+        energy_str = f"{r.mlip_energy:.4f}" if r.mlip_energy else "N/A"
+        click.echo(f"{marker} {r.rank:<5} {energy_str:<14} {formula:<20} {fname}")
+
+    if len(results) > 20:
+        click.echo(f"  ... and {len(results) - 20} more structures")
+
+    click.echo(f"\n  Selected for DFT validation: {len(selected)} structures")
+
+    # Save selected structures if output specified
+    if output and selected:
+        out_path = Path(output)
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        click.echo(f"\nSaving selected structures to {output}/")
+        for r in selected:
+            orig_name = Path(r.metadata.get("filename", f"struct_{r.rank}")).stem
+            out_file = out_path / f"{r.rank:03d}_{orig_name}.vasp"
+            ase_write(str(out_file), r.atoms, format="vasp")
+
+        click.echo(f"  Saved {len(selected)} structures")
+
+
+@cli.command("train-data")
+@click.argument("directories", nargs=-1, type=click.Path(exists=True))
+@click.option("--output", "-o", required=True, type=click.Path(), help="Output file path")
+@click.option("--format", "-f", "fmt", default="extxyz", help="Format: extxyz, db")
+@click.option("--energy-key", default="REF_energy", help="Key for energy in extended XYZ")
+@click.option("--forces-key", default="REF_forces", help="Key for forces in extended XYZ")
+@click.option("--source", "-s", default="vasp", help="Source label for training data")
+@click.option("--split", type=float, help="Validation split fraction (e.g., 0.1)")
+@click.option("--recursive", "-r", is_flag=True, help="Search directories recursively")
+def train_data(
+    directories: tuple[str, ...],
+    output: str,
+    fmt: str,
+    energy_key: str,
+    forces_key: str,
+    source: str,
+    split: float | None,
+    recursive: bool,
+) -> None:
+    """Export DFT calculations as MLIP training data.
+
+    Reads completed VASP calculations and exports energies and forces
+    in formats suitable for MLIP training (MACE, NequIP, etc.).
+
+    Examples:
+        # Export single calculation
+        atomix train-data ./relaxation -o train.xyz
+
+        # Export multiple calculations with custom keys
+        atomix train-data ./calc_* -o data.xyz --energy-key energy --forces-key forces
+
+        # Export with train/val split
+        atomix train-data ./calcs/ -r -o train.xyz --split 0.1
+
+        # Export to ASE database
+        atomix train-data ./md_run -o train.db -f db
+    """
+    from pathlib import Path
+
+    from atomix.calculators.vasp import VASPCalculator
+    from atomix.core.active_learning import TrainingDataExporter, TrainingPoint
+
+    # Find all calculation directories
+    calc_dirs = []
+    for d in directories:
+        path = Path(d)
+        if path.is_dir():
+            # Check if this is a calculation directory
+            if (path / "OUTCAR").exists() or (path / "vasprun.xml").exists():
+                calc_dirs.append(path)
+
+            # Search recursively if requested
+            if recursive:
+                for subdir in path.rglob("*"):
+                    if subdir.is_dir():
+                        if (subdir / "OUTCAR").exists() or (subdir / "vasprun.xml").exists():
+                            calc_dirs.append(subdir)
+
+    if not calc_dirs:
+        click.echo("No valid calculation directories found", err=True)
+        click.echo("Directories must contain OUTCAR or vasprun.xml")
+        raise click.Abort()
+
+    click.echo(f"Found {len(calc_dirs)} calculation directories")
+
+    # Extract training data
+    exporter = TrainingDataExporter()
+    success_count = 0
+    error_count = 0
+
+    for calc_dir in calc_dirs:
+        try:
+            calc = VASPCalculator(calc_dir)
+            results = calc.read_outputs()
+
+            if results["energy"] is None:
+                click.echo(f"  Skipping {calc_dir}: no energy found", err=True)
+                error_count += 1
+                continue
+
+            if results["forces"] is None:
+                click.echo(f"  Skipping {calc_dir}: no forces found", err=True)
+                error_count += 1
+                continue
+
+            # Use final structure or trajectory frames
+            if results.get("trajectory"):
+                # For MD/relaxation, can export trajectory frames
+                traj = results["trajectory"]
+                # Just use final frame for now (could add --all-frames option)
+                atoms = traj[-1] if traj else results["atoms"]
+            else:
+                atoms = results["atoms"]
+
+            if atoms is None:
+                click.echo(f"  Skipping {calc_dir}: no structure found", err=True)
+                error_count += 1
+                continue
+
+            point = TrainingPoint(
+                atoms=atoms,
+                energy=results["energy"],
+                forces=results["forces"],
+                stress=results.get("stress"),
+                source=source,
+                metadata={"directory": str(calc_dir)},
+            )
+            exporter.add_point(point)
+            success_count += 1
+
+        except Exception as e:
+            click.echo(f"  Error processing {calc_dir}: {e}", err=True)
+            error_count += 1
+
+    if len(exporter) == 0:
+        click.echo("No valid training data extracted", err=True)
+        raise click.Abort()
+
+    click.echo(f"\nExtracted {success_count} training points ({error_count} errors)")
+
+    # Handle train/val split
+    out_path = Path(output)
+    if split is not None and 0 < split < 1:
+        train_exp, val_exp = exporter.split_train_val(val_fraction=split)
+
+        # Determine output paths
+        stem = out_path.stem
+        suffix = out_path.suffix or (".xyz" if fmt == "extxyz" else ".db")
+        train_path = out_path.parent / f"{stem}_train{suffix}"
+        val_path = out_path.parent / f"{stem}_val{suffix}"
+
+        if fmt == "extxyz":
+            train_exp.to_extxyz(train_path, energy_key=energy_key, forces_key=forces_key)
+            val_exp.to_extxyz(val_path, energy_key=energy_key, forces_key=forces_key)
+        else:
+            train_exp.to_ase_db(train_path)
+            val_exp.to_ase_db(val_path)
+
+        click.echo(f"\nSaved training data:")
+        click.echo(f"  Train: {train_path} ({len(train_exp)} points)")
+        click.echo(f"  Val:   {val_path} ({len(val_exp)} points)")
+    else:
+        # Single output file
+        if fmt == "extxyz":
+            exporter.to_extxyz(out_path, energy_key=energy_key, forces_key=forces_key)
+        else:
+            exporter.to_ase_db(out_path)
+
+        click.echo(f"\nSaved {len(exporter)} training points to {out_path}")
+
+
+@cli.command("screen-sites")
+@click.argument("structure", type=click.Path(exists=True))
+@click.option("--adsorbate", "-a", required=True, help="Adsorbate species (e.g., O, CO)")
+@click.option("--calculator", "-c", default="mace", help="MLIP calculator: mace, nequip")
+@click.option("--model", "-m", default="medium", help="Model name or path")
+@click.option("--device", "-d", default="cpu", help="Device: cpu, cuda, mps")
+@click.option("--height", "-h", default=2.0, help="Adsorbate height above site (Angstrom)")
+@click.option("--top-n", "-n", default=5, help="Number of top sites to report")
+@click.option("--output", "-o", type=click.Path(), help="Output directory for top structures")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def screen_sites(
+    structure: str,
+    adsorbate: str,
+    calculator: str,
+    model: str,
+    device: str,
+    height: float,
+    top_n: int,
+    output: str | None,
+    as_json: bool,
+) -> None:
+    """Screen adsorption sites with MLIP.
+
+    Finds adsorption sites on a surface slab and screens them
+    with MLIP to rank by adsorption energy.
+
+    Examples:
+        # Screen O adsorption sites on Cu slab
+        atomix screen-sites ./cu_slab.vasp -a O -c mace -m medium
+
+        # Save top 3 configurations
+        atomix screen-sites ./slab.cif -a CO -n 3 -o ./top_sites/
+    """
+    import json
+    from pathlib import Path
+
+    from ase import Atoms
+    from ase.io import read as ase_read
+    from ase.io import write as ase_write
+
+    from atomix.calculators.mlip import get_mlip_calculator
+    from atomix.core.screening import AdsorptionScreening, ScreeningConfig
+    from atomix.sites.surface import find_surface_sites
+
+    # Load slab
+    try:
+        slab = ase_read(structure)
+    except Exception as e:
+        click.echo(f"Error reading structure: {e}", err=True)
+        raise click.Abort()
+
+    click.echo(f"Loaded slab: {len(slab)} atoms, {slab.get_chemical_formula()}")
+
+    # Find adsorption sites
+    sites = find_surface_sites(slab, height=height)
+    if not sites:
+        click.echo("No adsorption sites found on surface", err=True)
+        raise click.Abort()
+
+    click.echo(f"Found {len(sites)} adsorption sites")
+
+    # Create adsorbate
+    if len(adsorbate) <= 2 and adsorbate.isalpha():
+        # Single atom or diatomic
+        ads_atoms = Atoms(adsorbate)
+    else:
+        # Try as molecule formula
+        from ase.build import molecule
+        try:
+            ads_atoms = molecule(adsorbate)
+        except Exception:
+            ads_atoms = Atoms(adsorbate)
+
+    # Initialize MLIP
+    try:
+        if Path(model).exists():
+            mlip = get_mlip_calculator(calculator, model_path=model, device=device)
+        else:
+            mlip = get_mlip_calculator(calculator, model=model, device=device)
+    except ImportError as e:
+        click.echo(f"Error: {e}", err=True)
+        raise click.Abort()
+
+    # Run screening
+    click.echo(f"Screening sites with {calculator} ({model})...")
+    config = ScreeningConfig(top_n=top_n)
+    screening = AdsorptionScreening(mlip, config)
+
+    site_positions = [tuple(s.position) for s in sites]
+    site_labels = [f"{s.site_type}_{i}" for i, s in enumerate(sites)]
+
+    results = screening.screen_sites(
+        slab, ads_atoms, site_positions,
+        height=height, site_labels=site_labels
+    )
+
+    if as_json:
+        json_results = []
+        for r in results:
+            json_results.append({
+                "rank": r.rank,
+                "site_label": r.metadata.get("site_label", ""),
+                "energy": r.mlip_energy,
+                "position": list(r.metadata.get("site", [])),
+                "selected": r.selected_for_dft,
+            })
+        click.echo(json.dumps(json_results, indent=2))
+        return
+
+    # Display results
+    click.echo(f"\n=== Site Screening Results ===\n")
+    click.echo(f"  {'Rank':<6} {'Energy (eV)':<14} {'Site':<15} {'Position'}")
+    click.echo("  " + "-" * 60)
+
+    for r in results[:top_n + 5]:  # Show a few more than top_n
+        marker = "*" if r.selected_for_dft else " "
+        site_label = r.metadata.get("site_label", "")[:14]
+        energy_str = f"{r.mlip_energy:.4f}" if r.mlip_energy else "N/A"
+        pos = r.metadata.get("site", (0, 0, 0))
+        pos_str = f"({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})"
+        click.echo(f"{marker} {r.rank:<5} {energy_str:<14} {site_label:<15} {pos_str}")
+
+    click.echo(f"\n  * = Selected (top {top_n})")
+
+    # Save top structures if output specified
+    if output:
+        out_path = Path(output)
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        selected = [r for r in results if r.selected_for_dft]
+        click.echo(f"\nSaving top {len(selected)} structures to {output}/")
+
+        for r in selected:
+            site_label = r.metadata.get("site_label", f"site_{r.rank}")
+            out_file = out_path / f"{r.rank:02d}_{site_label}.vasp"
+            ase_write(str(out_file), r.atoms, format="vasp")
+
+        click.echo(f"  Saved {len(selected)} structures")
+
+
 if __name__ == "__main__":
     cli()
