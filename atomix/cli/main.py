@@ -109,10 +109,137 @@ def generate(
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True), default=".")
-def status(directory: str) -> None:
-    """Check status of calculations in directory."""
+@click.option("--scheduler", "-S", default="slurm", help="Scheduler: slurm, pbs, local")
+@click.option("--partition", "-p", default=None, help="SLURM partition or PBS queue")
+@click.option("--account", "-A", default=None, help="Account/project name")
+@click.option("--nodes", "-n", default=1, help="Number of nodes")
+@click.option("--ntasks", "-t", default=32, help="Tasks per node")
+@click.option("--time", "-T", default="24:00:00", help="Wall time")
+@click.option("--vasp-command", default="vasp_std", help="VASP executable")
+@click.option("--modules", "-m", multiple=True, help="Modules to load")
+@click.option("--dry-run", is_flag=True, help="Generate script but don't submit")
+def submit(
+    directory: str,
+    scheduler: str,
+    partition: str | None,
+    account: str | None,
+    nodes: int,
+    ntasks: int,
+    time: str,
+    vasp_command: str,
+    modules: tuple[str, ...],
+    dry_run: bool,
+) -> None:
+    """Submit calculation to job scheduler.
+
+    DIRECTORY is the path containing VASP input files.
+
+    Example:
+        atomix submit ./cu_relax -S slurm -p normal -n 2 -t 64
+    """
+    from atomix.core.jobs import get_submitter
+
+    click.echo(f"Submitting job from: {directory}")
+
+    # Build submitter options
+    options: dict = {
+        "nodes": nodes,
+        "ntasks_per_node": ntasks,
+        "time": time,
+    }
+    if partition:
+        if scheduler == "slurm":
+            options["partition"] = partition
+        else:
+            options["queue"] = partition
+    if account:
+        options["account"] = account
+
+    submitter = get_submitter(scheduler, directory, **options)
+
+    # Generate script
+    if hasattr(submitter, "generate_script"):
+        script = submitter.generate_script(
+            job_name=Path(directory).name or "vasp_job",
+            vasp_command=vasp_command,
+            modules=list(modules) if modules else None,
+        )
+        click.echo("\nGenerated script:")
+        click.echo("-" * 40)
+        click.echo(script)
+        click.echo("-" * 40)
+
+    if dry_run:
+        click.echo("\n[Dry run - script not submitted]")
+        return
+
+    # Submit
+    try:
+        job_id = submitter.submit(
+            job_name=Path(directory).name or "vasp_job",
+            vasp_command=vasp_command,
+            modules=list(modules) if modules else None,
+        )
+        click.echo(f"\nJob submitted: {job_id}")
+    except Exception as e:
+        click.echo(f"Submission failed: {e}", err=True)
+        raise click.Abort()
+
+
+@cli.command()
+@click.argument("directory", type=click.Path(exists=True), default=".")
+@click.option("--job-id", "-j", default=None, help="Job ID to check (for scheduler status)")
+@click.option("--scheduler", "-S", default="slurm", help="Scheduler: slurm, pbs, local")
+def status(directory: str, job_id: str | None, scheduler: str) -> None:
+    """Check status of calculations in directory.
+
+    Without --job-id, checks for VASP output files.
+    With --job-id, queries the job scheduler.
+    """
+    from atomix.core.jobs import get_submitter
+
     click.echo(f"Checking status in: {directory}")
-    click.echo("(Not yet implemented)")
+
+    dir_path = Path(directory)
+
+    # Check for VASP files
+    poscar = dir_path / "POSCAR"
+    incar = dir_path / "INCAR"
+    outcar = dir_path / "OUTCAR"
+    oszicar = dir_path / "OSZICAR"
+
+    if not poscar.exists():
+        click.echo("  No POSCAR found - not a VASP calculation directory")
+        return
+
+    click.echo(f"  POSCAR: {'found' if poscar.exists() else 'missing'}")
+    click.echo(f"  INCAR:  {'found' if incar.exists() else 'missing'}")
+
+    # Check OUTCAR for completion
+    if outcar.exists():
+        content = outcar.read_text()
+        if "reached required accuracy" in content or "General timing" in content:
+            click.echo("  Status: COMPLETED")
+        elif "Error" in content or "VERY BAD NEWS" in content:
+            click.echo("  Status: FAILED")
+        else:
+            click.echo("  Status: RUNNING or INCOMPLETE")
+
+        # Extract some info from OSZICAR if available
+        if oszicar.exists():
+            lines = oszicar.read_text().strip().split("\n")
+            if lines:
+                last_line = lines[-1]
+                click.echo(f"  Last step: {last_line[:60]}...")
+    else:
+        click.echo("  OUTCAR: not found")
+        click.echo("  Status: NOT STARTED or QUEUED")
+
+    # Check scheduler status if job_id provided
+    if job_id:
+        submitter = get_submitter(scheduler, directory)
+        sched_status = submitter.status(job_id)
+        click.echo(f"  Scheduler ({scheduler}): {sched_status}")
 
 
 @cli.command()
