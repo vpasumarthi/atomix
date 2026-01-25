@@ -245,19 +245,19 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
   - Restart handling for incomplete calculations
   - CLI: `submit`, `status`, `analyze`, `validate`, `restart`
 
-### In Progress: Phase 3 - Analysis Pipeline
-Completed:
-- ✓ Adsorption energy workflows (E_ads calculation)
-- ✓ Site enumeration (top, bridge, hollow via Delaunay triangulation)
-- ✓ Adsorbate placement at sites
-- ✓ Coverage-dependent adsorption energy analysis
-- ✓ Batch E_ads calculations across directories
-- ✓ CLI: `atomix adsorption`, `atomix sites`
+- **Phase 3**: Analysis Pipeline ✓
+  - Adsorption energy workflows (E_ads, coverage analysis, batch)
+  - Site enumeration (top, bridge, hollow via Delaunay triangulation)
+  - Adsorbate placement at sites
+  - Trajectory analysis (RDF, MSD, diffusion coefficients)
+  - Formation energy calculations
+  - CLI: `atomix adsorption`, `atomix sites`
 
-Remaining Phase 3 work:
-- Reference calculations (gas-phase adsorbate automation)
-- Trajectory analysis (RDF, MSD, diffusion coefficients)
-- Formation energy calculations
+### Next: Phase 4 - MLIP Integration
+Focus areas:
+1. Drop-in calculator replacement (MACECalculator)
+2. Screening workflows (MLIP fast scan → DFT validation)
+3. Active learning data generation helpers
 
 ## Getting Started Commands
 
