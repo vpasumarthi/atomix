@@ -245,17 +245,19 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
   - Restart handling for incomplete calculations
   - CLI: `submit`, `status`, `analyze`, `validate`, `restart`
 
-### Next: Phase 3 - Analysis Pipeline
-Focus areas:
-1. Adsorption energy workflows (E_ads calculation)
-2. Site enumeration (top, bridge, hollow)
-3. Reference calculations (gas-phase adsorbates)
-4. Batch analysis across directories
+### In Progress: Phase 3 - Analysis Pipeline
+Completed:
+- ✓ Adsorption energy workflows (E_ads calculation)
+- ✓ Site enumeration (top, bridge, hollow via Delaunay triangulation)
+- ✓ Adsorbate placement at sites
+- ✓ Coverage-dependent adsorption energy analysis
+- ✓ Batch E_ads calculations across directories
+- ✓ CLI: `atomix adsorption`, `atomix sites`
 
-Key files to implement/extend:
-- `atomix/analysis/adsorption.py` - AdsorptionAnalyzer class
-- `atomix/sites/surface.py` - SurfaceSite identification
-- CLI command: `atomix adsorption`
+Remaining Phase 3 work:
+- Reference calculations (gas-phase adsorbate automation)
+- Trajectory analysis (RDF, MSD, diffusion coefficients)
+- Formation energy calculations
 
 ## Getting Started Commands
 

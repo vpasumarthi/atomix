@@ -466,5 +466,223 @@ def init(output: str) -> None:
     click.echo(f"Created configuration file: {output}")
 
 
+@cli.command()
+@click.argument("directories", nargs=-1, type=click.Path(exists=True))
+@click.option("--slab", "-s", type=click.Path(exists=True), help="Slab calculation directory")
+@click.option("--slab-energy", "-E", type=float, help="Slab energy (eV) if known")
+@click.option("--gas-ref", "-g", type=click.Path(exists=True), help="Gas reference calculation directory")
+@click.option("--gas-energy", "-G", type=float, help="Gas reference energy (eV) if known")
+@click.option("--adsorbate", "-a", default="O", help="Adsorbate species name")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def adsorption(
+    directories: tuple[str, ...],
+    slab: str | None,
+    slab_energy: float | None,
+    gas_ref: str | None,
+    gas_energy: float | None,
+    adsorbate: str,
+    as_json: bool,
+) -> None:
+    """Calculate adsorption energies.
+
+    E_ads = E(slab+adsorbate) - E(slab) - E(gas_reference)
+
+    Provide calculation directories for slab+adsorbate systems.
+    Reference energies can be specified directly or read from directories.
+
+    Examples:
+        # Single calculation with explicit references
+        atomix adsorption ./o_on_cu -E -123.45 -G -4.93
+
+        # Batch calculations
+        atomix adsorption ./site_* -s ./clean_slab -g ./o_gas -a O
+
+        # Multiple sites with JSON output
+        atomix adsorption ./top ./bridge ./hollow -s ./slab -G -4.93 --json
+    """
+    import json
+
+    from atomix.analysis.adsorption import AdsorptionAnalyzer
+    from atomix.calculators.vasp import VASPCalculator
+
+    # Get slab energy
+    if slab_energy is None:
+        if slab is None:
+            click.echo("Error: Must provide either --slab directory or --slab-energy", err=True)
+            raise click.Abort()
+        calc = VASPCalculator(slab)
+        try:
+            slab_energy = calc.get_energy()
+            if slab_energy is None:
+                click.echo(f"Error: Could not read energy from {slab}", err=True)
+                raise click.Abort()
+        except Exception as e:
+            click.echo(f"Error reading slab energy: {e}", err=True)
+            raise click.Abort()
+
+    # Get gas reference energy
+    if gas_energy is None:
+        if gas_ref is None:
+            click.echo("Error: Must provide either --gas-ref directory or --gas-energy", err=True)
+            raise click.Abort()
+        calc = VASPCalculator(gas_ref)
+        try:
+            gas_energy = calc.get_energy()
+            if gas_energy is None:
+                click.echo(f"Error: Could not read energy from {gas_ref}", err=True)
+                raise click.Abort()
+        except Exception as e:
+            click.echo(f"Error reading gas reference energy: {e}", err=True)
+            raise click.Abort()
+
+    # Create analyzer
+    analyzer = AdsorptionAnalyzer(
+        slab_energy=slab_energy,
+        gas_references={adsorbate: gas_energy},
+    )
+
+    if not directories:
+        click.echo("No calculation directories provided", err=True)
+        raise click.Abort()
+
+    # Calculate adsorption energies
+    results = analyzer.batch_adsorption_energies(
+        list(directories),
+        adsorbate=adsorbate,
+    )
+
+    if as_json:
+        click.echo(json.dumps(results, indent=2))
+        return
+
+    # Display as table
+    click.echo(f"\n=== Adsorption Energies ({adsorbate}) ===\n")
+    click.echo(f"  Slab energy: {slab_energy:.6f} eV")
+    click.echo(f"  Gas reference ({adsorbate}): {gas_energy:.6f} eV")
+    click.echo()
+    click.echo(f"  {'Directory':<30} {'Energy (eV)':<14} {'E_ads (eV)':<12} {'Status'}")
+    click.echo("  " + "-" * 70)
+
+    for r in results:
+        name = r["name"][:28] if len(r["name"]) > 28 else r["name"]
+        if r["energy"] is not None:
+            energy_str = f"{r['energy']:.4f}"
+            e_ads_str = f"{r['e_ads']:.4f}" if r["e_ads"] is not None else "N/A"
+            status = "OK" if r["converged"] else "not converged"
+        else:
+            energy_str = "N/A"
+            e_ads_str = "N/A"
+            status = r.get("error", "error")[:20]
+
+        click.echo(f"  {name:<30} {energy_str:<14} {e_ads_str:<12} {status}")
+
+    # Summary statistics
+    valid_e_ads = [r["e_ads"] for r in results if r["e_ads"] is not None]
+    if valid_e_ads:
+        click.echo()
+        click.echo(f"  Min E_ads: {min(valid_e_ads):.4f} eV")
+        click.echo(f"  Max E_ads: {max(valid_e_ads):.4f} eV")
+        if len(valid_e_ads) > 1:
+            import numpy as np
+            click.echo(f"  Mean E_ads: {np.mean(valid_e_ads):.4f} eV")
+
+
+@cli.command()
+@click.argument("structure", type=click.Path(exists=True))
+@click.option("--height", "-h", default=1.5, help="Height above surface for sites (Angstrom)")
+@click.option("--symprec", "-s", default=0.1, help="Symmetry precision for unique sites (Angstrom)")
+@click.option("--adsorbate", "-a", default=None, help="Adsorbate to place (e.g., O, CO, OH)")
+@click.option("--output", "-o", type=click.Path(), help="Output directory for structures")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def sites(
+    structure: str,
+    height: float,
+    symprec: float,
+    adsorbate: str | None,
+    output: str | None,
+    as_json: bool,
+) -> None:
+    """Find adsorption sites on a surface slab.
+
+    Identifies unique top, bridge, and hollow (fcc/hcp) sites
+    using Delaunay triangulation of surface atoms.
+
+    Examples:
+        # Find sites on a slab
+        atomix sites ./POSCAR
+
+        # Find sites and generate structures with O adsorbate
+        atomix sites ./slab.cif -a O -o ./site_structures/
+
+        # Output site info as JSON
+        atomix sites ./POSCAR --json
+    """
+    import json
+    from pathlib import Path
+
+    from ase.io import read as ase_read
+    from ase.io import write as ase_write
+
+    from atomix.sites.surface import add_adsorbate_at_site, find_surface_sites
+
+    # Load structure
+    try:
+        slab = ase_read(structure)
+    except Exception as e:
+        click.echo(f"Error reading structure: {e}", err=True)
+        raise click.Abort()
+
+    click.echo(f"Loaded: {len(slab)} atoms, {slab.get_chemical_formula()}")
+
+    # Find sites
+    try:
+        found_sites = find_surface_sites(slab, height=height, symprec=symprec)
+    except Exception as e:
+        click.echo(f"Error finding sites: {e}", err=True)
+        raise click.Abort()
+
+    if as_json:
+        site_data = []
+        for i, site in enumerate(found_sites):
+            site_data.append({
+                "index": i,
+                "type": site.site_type,
+                "position": site.position.tolist(),
+                "atoms_indices": site.atoms_indices,
+            })
+        click.echo(json.dumps(site_data, indent=2))
+        return
+
+    # Count by type
+    type_counts: dict[str, int] = {}
+    for site in found_sites:
+        type_counts[site.site_type] = type_counts.get(site.site_type, 0) + 1
+
+    click.echo(f"\nFound {len(found_sites)} unique adsorption sites:")
+    for site_type, count in sorted(type_counts.items()):
+        click.echo(f"  {site_type}: {count}")
+
+    click.echo(f"\n  {'#':<4} {'Type':<8} {'Position (x, y, z)'}")
+    click.echo("  " + "-" * 50)
+    for i, site in enumerate(found_sites):
+        pos_str = f"({site.position[0]:.3f}, {site.position[1]:.3f}, {site.position[2]:.3f})"
+        click.echo(f"  {i:<4} {site.site_type:<8} {pos_str}")
+
+    # Generate structures with adsorbate if requested
+    if adsorbate and output:
+        out_path = Path(output)
+        out_path.mkdir(parents=True, exist_ok=True)
+
+        click.echo(f"\nGenerating structures with {adsorbate}:")
+        for i, site in enumerate(found_sites):
+            struct_with_ads = add_adsorbate_at_site(slab, adsorbate, site)
+            filename = f"{site.site_type}_{i:02d}.vasp"
+            filepath = out_path / filename
+            ase_write(filepath, struct_with_ads, format="vasp")
+            click.echo(f"  - {filename}")
+
+        click.echo(f"\nStructures saved to {output}/")
+
+
 if __name__ == "__main__":
     cli()
