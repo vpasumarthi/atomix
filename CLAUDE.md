@@ -150,7 +150,8 @@ atomix/
 │   ├── test_core.py            # Config tests
 │   ├── test_analysis.py        # Trajectory/energy analysis tests
 │   ├── test_adsorption.py      # Adsorption workflow tests
-│   └── test_mlip.py            # MLIP calculator/screening tests
+│   ├── test_mlip.py            # MLIP calculator/screening tests
+│   └── test_cli.py             # CLI command tests
 ├── docs/
 ├── CLAUDE.md                   # This file (for Claude Code)
 ├── pyproject.toml
@@ -270,11 +271,15 @@ E_ads = E(slab+adsorbate) - E(slab) - E(adsorbate_gas)
     - UncertaintyEstimator (ensemble disagreement)
     - ActiveLearningSelector (uncertainty sampling, diversity selection)
   - Configuration: `config.get("mlip", "mace", "model")` etc.
+  - CLI commands:
+    - `atomix screen` - Screen structures with MLIP
+    - `atomix train-data` - Export DFT calculations as training data
+    - `atomix screen-sites` - Screen adsorption sites with MLIP
 
 ### Next Steps
-- CLI commands for MLIP workflows (`atomix screen`, `atomix train-data`)
 - CP2KCalculator implementation
 - Workflow.run() implementation with actual job execution
+- Ensemble model uncertainty in CLI commands
 
 ## Environment Notes
 
