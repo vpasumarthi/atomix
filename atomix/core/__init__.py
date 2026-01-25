@@ -21,12 +21,14 @@ from atomix.core.screening import (
     ScreeningResult,
     ScreeningWorkflow,
 )
-from atomix.core.workflow import Workflow
+from atomix.core.workflow import RelaxationWorkflow, ScreeningWorkflowSimple, Workflow
 
 __all__ = [
     "BaseCalculation",
     "Config",
     "Workflow",
+    "RelaxationWorkflow",
+    "ScreeningWorkflowSimple",
     "JobSubmitter",
     "SLURMSubmitter",
     "PBSSubmitter",
