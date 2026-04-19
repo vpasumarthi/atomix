@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atomix"
-version = "0.1.0"
+version = "0.1.1"
 description = "Atomistic Modeling Interface for eXploration - Natural language driven toolkit for ab initio / DFT / atomistic modeling workflows"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -63,9 +63,9 @@ all = [
 atomix = "atomix.cli.main:cli"
 
 [project.urls]
-Homepage = "https://github.com/atomix-project/atomix"
-Documentation = "https://github.com/atomix-project/atomix#readme"
-Repository = "https://github.com/atomix-project/atomix"
+Homepage = "https://github.com/vpasumarthi/atomix"
+Documentation = "https://github.com/vpasumarthi/atomix#readme"
+Repository = "https://github.com/vpasumarthi/atomix"
 
 [tool.setuptools.packages.find]
 where = ["."]
