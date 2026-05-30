@@ -6,7 +6,7 @@ uncertainty, and exporting data in formats suitable for MLIP training.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 from ase import Atoms
@@ -485,8 +485,8 @@ class ActiveLearningSelector:
         """Generate SOAP descriptor features."""
         try:
             from dscribe.descriptors import SOAP
-        except ImportError:
-            raise ImportError("dscribe is required for SOAP features")
+        except ImportError as e:
+            raise ImportError("dscribe is required for SOAP features") from e
 
         # Get all species
         all_species = set()

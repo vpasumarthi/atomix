@@ -8,7 +8,6 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Literal
 
-import numpy as np
 from ase import Atoms
 from ase.calculators.calculator import Calculator
 

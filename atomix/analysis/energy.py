@@ -1,6 +1,5 @@
 """Energy analysis utilities for atomix."""
 
-from typing import Any
 
 from ase import Atoms
 

@@ -1,7 +1,6 @@
 """Trajectory analysis utilities for atomix."""
 
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 from ase import Atoms
@@ -54,7 +53,6 @@ class TrajectoryAnalyzer:
         """
         from ase.geometry import get_distances
 
-        dr = rmax / nbins
         r_edges = np.linspace(0, rmax, nbins + 1)
         r_centers = (r_edges[:-1] + r_edges[1:]) / 2
         hist_sum = np.zeros(nbins)

@@ -1,6 +1,5 @@
 """Surface site identification for catalysis workflows."""
 
-from typing import Any
 
 import numpy as np
 from ase import Atoms
@@ -127,7 +126,6 @@ def find_surface_sites(
             seen_positions.append(pos.copy())
 
     # Bridge and hollow sites from Delaunay triangles
-    n_original = len(surface_indices)
     for simplex in tri.simplices:
         # Get original indices (unwrap periodic images)
         orig_indices = []

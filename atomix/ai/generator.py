@@ -42,15 +42,15 @@ class NLGenerator:
                 import anthropic
 
                 self._client = anthropic.Anthropic(api_key=self.api_key)
-            except ImportError:
-                raise ImportError("anthropic package required: pip install anthropic")
+            except ImportError as e:
+                raise ImportError("anthropic package required: pip install anthropic") from e
         elif self.provider == "openai":
             try:
                 import openai
 
                 self._client = openai.OpenAI(api_key=self.api_key)
-            except ImportError:
-                raise ImportError("openai package required: pip install openai")
+            except ImportError as e:
+                raise ImportError("openai package required: pip install openai") from e
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
@@ -126,7 +126,7 @@ class NLGenerator:
         try:
             result = json.loads(json_str)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in response: {e}")
+            raise ValueError(f"Invalid JSON in response: {e}") from e
 
         # Validate required fields
         if "incar" not in result:

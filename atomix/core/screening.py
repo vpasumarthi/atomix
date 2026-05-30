@@ -6,7 +6,6 @@ with accurate DFT calculations.
 """
 
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
@@ -355,8 +354,8 @@ class ScreeningWorkflow:
         """
         try:
             import pandas as pd
-        except ImportError:
-            raise ImportError("pandas is required for to_dataframe()")
+        except ImportError as e:
+            raise ImportError("pandas is required for to_dataframe()") from e
 
         data = []
         for r in self._results:
@@ -426,7 +425,6 @@ class AdsorptionScreening:
         list[ScreeningResult]
             Screening results for each site.
         """
-        from atomix.analysis.adsorption import AdsorptionAnalyzer
 
         if site_labels is None:
             site_labels = [f"site_{i}" for i in range(len(sites))]

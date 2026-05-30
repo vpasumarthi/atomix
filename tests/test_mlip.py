@@ -1,12 +1,12 @@
 """Tests for MLIP calculators and screening workflows."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
 from ase import Atoms
-from ase.build import bulk, fcc111, molecule
+from ase.build import fcc111
 
 from atomix.calculators.mlip import (
     MACECalculator,
@@ -215,7 +215,7 @@ class TestScreeningWorkflow:
     def candidate_structures(self) -> list[Atoms]:
         """Create candidate structures for screening."""
         structures = []
-        for i in range(10):
+        for _i in range(10):
             atoms = Atoms(
                 "Cu4",
                 positions=[[0, 0, 0], [2, 0, 0], [0, 2, 0], [2, 2, 0]],

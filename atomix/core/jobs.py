@@ -472,7 +472,7 @@ class LocalRunner(JobSubmitter):
                 self._processes[job_id] = proc
                 return job_id
             else:
-                result = subprocess.run(
+                subprocess.run(
                     cmd,
                     cwd=self.working_dir,
                     stdout=out,

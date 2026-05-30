@@ -1,6 +1,5 @@
 """Tests for core atomix functionality."""
 
-import pytest
 
 from atomix.core.config import Config
 

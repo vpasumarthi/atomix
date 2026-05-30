@@ -2,8 +2,6 @@
 
 from typing import Any
 
-from ase import Atoms
-
 
 class AdsorptionAnalyzer:
     """Calculate adsorption energies for surface catalysis.

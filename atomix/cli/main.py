@@ -69,7 +69,7 @@ def generate(
         result = gen.generate(prompt, atoms=atoms)
     except Exception as e:
         click.echo(f"Error calling LLM: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     # Extract parameters
     incar = result.get("incar", {})
@@ -98,7 +98,7 @@ def generate(
     # Report results
     click.echo(f"\nSetup complete in {output}/")
     click.echo(f"  Calculation type: {calc_type}")
-    for name, path in files.items():
+    for name, _path in files.items():
         click.echo(f"  - {name}")
 
     if warnings:
@@ -183,7 +183,7 @@ def submit(
         click.echo(f"\nJob submitted: {job_id}")
     except Exception as e:
         click.echo(f"Submission failed: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @cli.command()
@@ -272,7 +272,7 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
         results = calc.read_outputs()
     except Exception as e:
         click.echo(f"Error parsing outputs: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     if as_json:
         # Convert numpy arrays to lists for JSON serialization
@@ -438,7 +438,7 @@ def restart(directory: str, calc_type: str) -> None:
     try:
         files = calc.setup_restart(calc_type)
         click.echo(f"Restart setup complete in {directory}/")
-        for name, path in files.items():
+        for name, _path in files.items():
             click.echo(f"  - Updated {name}")
 
         # Show what restart settings were applied
@@ -452,7 +452,7 @@ def restart(directory: str, calc_type: str) -> None:
 
     except FileNotFoundError as e:
         click.echo(f"Restart failed: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
 
 @cli.command()
@@ -518,7 +518,7 @@ def adsorption(
                 raise click.Abort()
         except Exception as e:
             click.echo(f"Error reading slab energy: {e}", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Get gas reference energy
     if gas_energy is None:
@@ -533,7 +533,7 @@ def adsorption(
                 raise click.Abort()
         except Exception as e:
             click.echo(f"Error reading gas reference energy: {e}", err=True)
-            raise click.Abort()
+            raise click.Abort() from e
 
     # Create analyzer
     analyzer = AdsorptionAnalyzer(
@@ -630,7 +630,7 @@ def sites(
         slab = ase_read(structure)
     except Exception as e:
         click.echo(f"Error reading structure: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     click.echo(f"Loaded: {len(slab)} atoms, {slab.get_chemical_formula()}")
 
@@ -639,7 +639,7 @@ def sites(
         found_sites = find_surface_sites(slab, height=height, symprec=symprec)
     except Exception as e:
         click.echo(f"Error finding sites: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     if as_json:
         site_data = []
@@ -768,7 +768,7 @@ def screen(
     except ImportError as e:
         click.echo(f"Error: {e}", err=True)
         click.echo("Install MLIP dependencies: pip install atomix[mlip]", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     # Configure screening
     config = ScreeningConfig(
@@ -966,7 +966,7 @@ def train_data(
             train_exp.to_ase_db(train_path)
             val_exp.to_ase_db(val_path)
 
-        click.echo(f"\nSaved training data:")
+        click.echo("\nSaved training data:")
         click.echo(f"  Train: {train_path} ({len(train_exp)} points)")
         click.echo(f"  Val:   {val_path} ({len(val_exp)} points)")
     else:
@@ -1028,7 +1028,7 @@ def screen_sites(
         slab = ase_read(structure)
     except Exception as e:
         click.echo(f"Error reading structure: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     click.echo(f"Loaded slab: {len(slab)} atoms, {slab.get_chemical_formula()}")
 
@@ -1060,7 +1060,7 @@ def screen_sites(
             mlip = get_mlip_calculator(calculator, model=model, device=device)
     except ImportError as e:
         click.echo(f"Error: {e}", err=True)
-        raise click.Abort()
+        raise click.Abort() from e
 
     # Run screening
     click.echo(f"Screening sites with {calculator} ({model})...")
@@ -1089,7 +1089,7 @@ def screen_sites(
         return
 
     # Display results
-    click.echo(f"\n=== Site Screening Results ===\n")
+    click.echo("\n=== Site Screening Results ===\n")
     click.echo(f"  {'Rank':<6} {'Energy (eV)':<14} {'Site':<15} {'Position'}")
     click.echo("  " + "-" * 60)
 

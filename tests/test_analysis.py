@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 from ase import Atoms
-from ase.build import bulk, molecule
+from ase.build import bulk
 
 from atomix.analysis.energy import EnergyAnalyzer
 from atomix.analysis.trajectory import TrajectoryAnalyzer

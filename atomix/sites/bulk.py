@@ -1,6 +1,5 @@
 """Bulk defect site identification."""
 
-from typing import Any
 
 import numpy as np
 from ase import Atoms
