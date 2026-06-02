@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project roadmap
+    url: https://github.com/vpasumarthi/atomix/blob/main/ROADMAP.md
+    about: Use ROADMAP.md in this repository for product goals, milestones, and backlog priorities.

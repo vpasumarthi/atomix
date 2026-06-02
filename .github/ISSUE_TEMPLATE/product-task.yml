@@ -1,0 +1,97 @@
+name: Product task
+description: Track a roadmap-sized feature, audit, bug, infra task, or research decision.
+title: "[Task]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for tasks that are large enough to resume later, but small enough to finish in one focused implementation pass. See ROADMAP.md for product goals, milestones, and priorities.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - package
+        - cli
+        - vasp
+        - workflow
+        - analysis
+        - sites
+        - mlip
+        - ai
+        - ci
+        - license
+        - docs
+        - maintenance
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: P0 is required before v0.2.0 is trustworthy; P1 is core MVP; P2 is expansion; P3 is later.
+      options:
+        - P0 - release blocker
+        - P1 - core MVP
+        - P2 - expansion
+        - P3 - later
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: Size
+      description: Keep tasks meaningful but bounded.
+      options:
+        - S - focused change or audit
+        - M - meaningful multi-file task
+        - L - larger feature with clear substeps
+        - XL - split before implementation
+    validations:
+      required: true
+  - type: dropdown
+    id: compute
+    attributes:
+      label: Compute
+      options:
+        - none
+        - light
+        - network
+        - cluster
+        - gpu
+        - agent
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What user, developer, or release outcome should this produce?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What should change, and what is intentionally out of scope?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List concrete checks that make the task done.
+      placeholder: |
+        - Behavior is covered by focused tests or documented as a decision.
+        - `pytest tests/` passes when code changes are made.
+        - README/ROADMAP status is updated if scope changes.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies or blockers
+      description: Link related issues or explain what needs to happen first.
+      placeholder: "Depends on: none. Blocked by: license decision."
+    validations:
+      required: false
