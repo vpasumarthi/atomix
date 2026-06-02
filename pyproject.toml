@@ -31,16 +31,22 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 
+# Core install is intentionally minimal (click only) so that `atomix --help`,
+# `atomix info`, and `atomix --version` work without the scientific stack.
+# Real functionality requires the `science` extra (or `all`).
 dependencies = [
-    "ase>=3.22.0",
-    "numpy>=1.21.0",
-    "pymatgen>=2023.0.0",
     "click>=8.0.0",
-    "pyyaml>=6.0",
-    "requests>=2.28.0",
 ]
 
 [project.optional-dependencies]
+science = [
+    "ase>=3.22.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
+    "pymatgen>=2023.0.0",
+    "pyyaml>=6.0",
+    "requests>=2.28.0",
+]
 mlip = [
     "mace-torch>=0.3.0",
     "torch>=2.0.0",
@@ -55,8 +61,9 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
+# Full environment, including the scientific stack needed to run the test suite.
 all = [
-    "atomix[mlip,llm,dev]",
+    "atomix[science,mlip,llm,dev]",
 ]
 
 [project.scripts]
@@ -88,6 +95,12 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Package __init__.py files use lazy __getattr__ re-exports: the public names
+# are listed in a dynamically built __all__ and mirrored in a TYPE_CHECKING
+# block for editors/type-checkers, so ruff cannot see they are re-exports.
+"**/__init__.py" = ["F401"]
 
 [tool.mypy]
 python_version = "3.9"

@@ -1,17 +1,42 @@
-"""Calculator interfaces for atomix."""
+"""Calculator interfaces for atomix.
 
-from atomix.calculators.mlip import (
-    MACECalculator,
-    MLIPCalculator,
-    NequIPCalculator,
-    get_mlip_calculator,
-)
-from atomix.calculators.vasp import VASPCalculator
+Heavy scientific dependencies (ase, numpy, pymatgen) are imported lazily so
+that ``import atomix.calculators`` succeeds on a minimal (click-only) install.
+Accessing a specific class triggers the import of its submodule.
+"""
 
-__all__ = [
-    "VASPCalculator",
-    "MLIPCalculator",
-    "MACECalculator",
-    "NequIPCalculator",
-    "get_mlip_calculator",
-]
+from __future__ import annotations
+
+import importlib
+from typing import TYPE_CHECKING
+
+_EXPORTS = {
+    "VASPCalculator": "atomix.calculators.vasp",
+    "MLIPCalculator": "atomix.calculators.mlip",
+    "MACECalculator": "atomix.calculators.mlip",
+    "NequIPCalculator": "atomix.calculators.mlip",
+    "get_mlip_calculator": "atomix.calculators.mlip",
+}
+
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name: str):
+    module_path = _EXPORTS.get(name)
+    if module_path is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    return getattr(importlib.import_module(module_path), name)
+
+
+def __dir__() -> list[str]:
+    return sorted(__all__)
+
+
+if TYPE_CHECKING:
+    from atomix.calculators.mlip import (
+        MACECalculator,
+        MLIPCalculator,
+        NequIPCalculator,
+        get_mlip_calculator,
+    )
+    from atomix.calculators.vasp import VASPCalculator

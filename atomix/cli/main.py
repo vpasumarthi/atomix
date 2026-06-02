@@ -16,6 +16,21 @@ def cli() -> None:
 
 
 @cli.command()
+def info() -> None:
+    """Show atomix information."""
+    from atomix import __version__
+
+    click.echo(f"atomix version {__version__}")
+    click.echo("\nStatus: Alpha - Under active development")
+    click.echo("\nTarget applications:")
+    click.echo("  - VASP DFT calculations")
+    click.echo("  - Machine learning interatomic potentials (MACE, NequIP)")
+    click.echo("  - Catalysis and surface chemistry workflows")
+    click.echo("  - Atomistic simulation automation")
+    click.echo("\nFull features coming in v0.2.0+")
+
+
+@cli.command()
 @click.argument("prompt")
 @click.option("--structure", "-s", type=click.Path(exists=True), help="Input structure file")
 @click.option("--output", "-o", type=click.Path(), default=".", help="Output directory")
@@ -37,16 +52,14 @@ def generate(
     Example:
         atomix generate "Relax Cu(111) 3x3 slab, 4 layers, PBE+D3"
     """
-    from ase.io import read as ase_read
-
-    from atomix.ai.generator import NLGenerator
-    from atomix.calculators.vasp import VASPCalculator
-
     click.echo(f"Generating simulation setup for: {prompt}")
 
-    # Load structure if provided
+    # Load structure if provided. Reading a structure requires ase, so the
+    # import is deferred to here (a no-structure dry run needs no heavy deps).
     atoms = None
     if structure:
+        from ase.io import read as ase_read
+
         atoms = ase_read(structure)
         click.echo(f"Loaded structure: {len(atoms)} atoms, {atoms.get_chemical_formula()}")
 
@@ -55,6 +68,10 @@ def generate(
         click.echo(f"Provider: {provider}")
         click.echo(f"Output directory: {output}")
         return
+
+    # Heavy imports deferred until an actual generation run is needed.
+    from atomix.ai.generator import NLGenerator
+    from atomix.calculators.vasp import VASPCalculator
 
     # Initialize generator
     gen = NLGenerator(provider=provider, model=model) if model else NLGenerator(provider=provider)
