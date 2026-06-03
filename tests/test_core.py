@@ -1,6 +1,5 @@
 """Tests for core atomix functionality."""
 
-
 from atomix.core.config import Config
 
 

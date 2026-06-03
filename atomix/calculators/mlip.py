@@ -173,8 +173,7 @@ class MACECalculator(MLIPCalculator):
         """Load MACE calculator, handling imports gracefully."""
         if not self._check_mace_available():
             raise ImportError(
-                "mace-torch is required for MACECalculator. "
-                "Install with: pip install mace-torch"
+                "mace-torch is required for MACECalculator. Install with: pip install mace-torch"
             )
 
         from mace.calculators import MACECalculator as MACECalc
@@ -347,8 +346,7 @@ class NequIPCalculator(MLIPCalculator):
 
         if not self._check_nequip_available():
             raise ImportError(
-                "nequip is required for NequIPCalculator. "
-                "Install with: pip install nequip"
+                "nequip is required for NequIPCalculator. Install with: pip install nequip"
             )
 
         from nequip.ase import NequIPCalculator as NequIPCalc

@@ -171,33 +171,37 @@ class AdsorptionAnalyzer:
                 converged = outputs.get("converged", False)
 
                 if energy is not None:
-                    e_ads = self.adsorption_energy(
-                        energy, adsorbate, gas_reference
+                    e_ads = self.adsorption_energy(energy, adsorbate, gas_reference)
+                    results.append(
+                        {
+                            "directory": str(dir_path),
+                            "name": dir_path.name,
+                            "energy": energy,
+                            "e_ads": e_ads,
+                            "converged": converged,
+                        }
                     )
-                    results.append({
-                        "directory": str(dir_path),
-                        "name": dir_path.name,
-                        "energy": energy,
-                        "e_ads": e_ads,
-                        "converged": converged,
-                    })
                 else:
-                    results.append({
+                    results.append(
+                        {
+                            "directory": str(dir_path),
+                            "name": dir_path.name,
+                            "energy": None,
+                            "e_ads": None,
+                            "converged": False,
+                            "error": "No energy found",
+                        }
+                    )
+            except Exception as e:
+                results.append(
+                    {
                         "directory": str(dir_path),
                         "name": dir_path.name,
                         "energy": None,
                         "e_ads": None,
                         "converged": False,
-                        "error": "No energy found",
-                    })
-            except Exception as e:
-                results.append({
-                    "directory": str(dir_path),
-                    "name": dir_path.name,
-                    "energy": None,
-                    "e_ads": None,
-                    "converged": False,
-                    "error": str(e),
-                })
+                        "error": str(e),
+                    }
+                )
 
         return results

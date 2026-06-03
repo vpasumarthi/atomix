@@ -165,9 +165,7 @@ class Workflow:
                 max_force = float(np.max(np.linalg.norm(result["forces"], axis=1)))
                 if max_force > fmax:
                     result["converged"] = False
-                    result["warnings"].append(
-                        f"Max force {max_force:.4f} > fmax {fmax}"
-                    )
+                    result["warnings"].append(f"Max force {max_force:.4f} > fmax {fmax}")
 
         except Exception as e:
             result["errors"].append(str(e))
@@ -205,11 +203,13 @@ class Workflow:
                     self._steps[i + 1].atoms = result["atoms"]
 
             except Exception as e:
-                self._results.append({
-                    "converged": False,
-                    "errors": [str(e)],
-                    "step": i,
-                })
+                self._results.append(
+                    {
+                        "converged": False,
+                        "errors": [str(e)],
+                        "step": i,
+                    }
+                )
                 break
 
         return self._results

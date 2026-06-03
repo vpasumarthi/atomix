@@ -64,7 +64,11 @@ class MockMLIPCalculator(MLIPCalculator):
 
     def calculate(self, atoms: Atoms) -> dict:
         n_atoms = len(atoms)
-        forces = self._mock_forces if self._mock_forces is not None else np.random.randn(n_atoms, 3) * 0.1
+        forces = (
+            self._mock_forces
+            if self._mock_forces is not None
+            else np.random.randn(n_atoms, 3) * 0.1
+        )
         return {
             "converged": True,
             "energy": self._mock_energy,
@@ -267,6 +271,7 @@ class TestScreeningWorkflow:
 
     def test_screen_selection_energy_window(self) -> None:
         """Test selection by energy window."""
+
         # Create calculator returning different energies
         class VariableEnergyCalc(MockMLIPCalculator):
             def __init__(self):
@@ -433,6 +438,7 @@ class TestTrainingDataExporter:
         assert output_path.exists()
         # Read back and verify
         from ase.io import read
+
         atoms_list = read(str(output_path), index=":")
         assert len(atoms_list) == 5
         assert "REF_energy" in atoms_list[0].info
@@ -456,6 +462,7 @@ class TestTrainingDataExporter:
 
         assert db_path.exists()
         from ase.db import connect
+
         db = connect(str(db_path))
         assert len(db) == 5
 
@@ -466,10 +473,7 @@ class TestUncertaintyEstimator:
     @pytest.fixture
     def ensemble_calculators(self) -> list[MockMLIPCalculator]:
         """Create ensemble of mock calculators with varying predictions."""
-        return [
-            MockMLIPCalculator(energy=-10.0 + i * 0.1)
-            for i in range(3)
-        ]
+        return [MockMLIPCalculator(energy=-10.0 + i * 0.1) for i in range(3)]
 
     def test_init_requires_multiple(self) -> None:
         """Test that ensemble requires at least 2 calculators."""
@@ -496,10 +500,7 @@ class TestUncertaintyEstimator:
     ) -> None:
         """Test batch uncertainty estimation."""
         estimator = UncertaintyEstimator(ensemble_calculators)
-        structures = [
-            Atoms("Cu4", positions=np.random.randn(4, 3))
-            for _ in range(5)
-        ]
+        structures = [Atoms("Cu4", positions=np.random.randn(4, 3)) for _ in range(5)]
 
         results = estimator.estimate_batch(structures)
         assert len(results) == 5
@@ -518,10 +519,7 @@ class TestActiveLearningSelector:
     @pytest.fixture
     def candidate_structures(self) -> list[Atoms]:
         """Create candidate structures."""
-        return [
-            Atoms("Cu4", positions=np.random.randn(4, 3))
-            for _ in range(20)
-        ]
+        return [Atoms("Cu4", positions=np.random.randn(4, 3)) for _ in range(20)]
 
     def test_select_by_uncertainty(
         self,
@@ -529,9 +527,7 @@ class TestActiveLearningSelector:
         candidate_structures: list[Atoms],
     ) -> None:
         """Test uncertainty-based selection."""
-        selected = selector_with_estimator.select_by_uncertainty(
-            candidate_structures, n=5
-        )
+        selected = selector_with_estimator.select_by_uncertainty(candidate_structures, n=5)
 
         assert len(selected) == 5
         # Should return tuples of (atoms, uncertainty)
@@ -543,9 +539,7 @@ class TestActiveLearningSelector:
     ) -> None:
         """Test diversity-based selection."""
         selector = ActiveLearningSelector()
-        selected = selector.select_diverse(
-            candidate_structures, n=5, descriptor="composition"
-        )
+        selected = selector.select_diverse(candidate_structures, n=5, descriptor="composition")
 
         assert len(selected) == 5
 
@@ -554,14 +548,9 @@ class TestActiveLearningSelector:
         selector_with_estimator: ActiveLearningSelector,
     ) -> None:
         """Test selection from trajectory."""
-        trajectory = [
-            Atoms("Cu4", positions=np.random.randn(4, 3))
-            for _ in range(50)
-        ]
+        trajectory = [Atoms("Cu4", positions=np.random.randn(4, 3)) for _ in range(50)]
 
-        selected = selector_with_estimator.select_from_trajectory(
-            trajectory, n=10, interval=5
-        )
+        selected = selector_with_estimator.select_from_trajectory(trajectory, n=10, interval=5)
 
         assert len(selected) == 10
 

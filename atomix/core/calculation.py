@@ -285,9 +285,7 @@ class RelaxCalculation(BaseCalculation):
             pass
 
         if not self._results["converged"]:
-            self._results["warnings"].append(
-                f"Max force {max_force:.4f} > fmax {self.fmax}"
-            )
+            self._results["warnings"].append(f"Max force {max_force:.4f} > fmax {self.fmax}")
 
         # Update atoms with relaxed structure
         self.atoms = atoms
@@ -352,14 +350,16 @@ class AIMDCalculation(BaseCalculation):
     def setup(self) -> dict[str, Path]:
         """Set up VASP input files for AIMD calculation."""
         params = self.parameters.copy()
-        params.update({
-            "IBRION": 0,
-            "NSW": self.md_steps,
-            "POTIM": self.timestep,
-            "SMASS": 0,  # Nose-Hoover thermostat
-            "TEBEG": self.temperature,
-            "TEEND": self.temperature,
-        })
+        params.update(
+            {
+                "IBRION": 0,
+                "NSW": self.md_steps,
+                "POTIM": self.timestep,
+                "SMASS": 0,  # Nose-Hoover thermostat
+                "TEBEG": self.temperature,
+                "TEEND": self.temperature,
+            }
+        )
 
         kpoints = params.pop("kpoints", None)
         calculator = VASPCalculator(self.directory, **params)
@@ -370,9 +370,7 @@ class AIMDCalculation(BaseCalculation):
         if self.calculator is not None:
             self._run_ase_md()
         else:
-            raise NotImplementedError(
-                "File-based execution requires external job submission."
-            )
+            raise NotImplementedError("File-based execution requires external job submission.")
 
     def _run_ase_md(self) -> None:
         """Run MD using ASE dynamics."""
@@ -458,16 +456,18 @@ class NPTCalculation(AIMDCalculation):
     def setup(self) -> dict[str, Path]:
         """Set up VASP input files for NPT AIMD."""
         params = self.parameters.copy()
-        params.update({
-            "IBRION": 0,
-            "NSW": self.md_steps,
-            "POTIM": self.timestep,
-            "MDALGO": 3,  # Langevin thermostat with Parrinello-Rahman
-            "TEBEG": self.temperature,
-            "TEEND": self.temperature,
-            "PSTRESS": self.pressure * 10,  # kbar
-            "LANGEVIN_GAMMA_L": 10,
-        })
+        params.update(
+            {
+                "IBRION": 0,
+                "NSW": self.md_steps,
+                "POTIM": self.timestep,
+                "MDALGO": 3,  # Langevin thermostat with Parrinello-Rahman
+                "TEBEG": self.temperature,
+                "TEEND": self.temperature,
+                "PSTRESS": self.pressure * 10,  # kbar
+                "LANGEVIN_GAMMA_L": 10,
+            }
+        )
 
         kpoints = params.pop("kpoints", None)
         calculator = VASPCalculator(self.directory, **params)
@@ -606,12 +606,14 @@ class FrequencyCalculation(BaseCalculation):
     def setup(self) -> dict[str, Path]:
         """Set up VASP input files for frequency calculation."""
         params = self.parameters.copy()
-        params.update({
-            "IBRION": 5,  # Finite differences
-            "NSW": 1,
-            "POTIM": self.delta,
-            "NFREE": 2,  # Central differences
-        })
+        params.update(
+            {
+                "IBRION": 5,  # Finite differences
+                "NSW": 1,
+                "POTIM": self.delta,
+                "NFREE": 2,  # Central differences
+            }
+        )
 
         kpoints = params.pop("kpoints", None)
         calculator = VASPCalculator(self.directory, **params)
@@ -650,9 +652,7 @@ class FrequencyCalculation(BaseCalculation):
         # Check for imaginary frequencies
         imaginary = [f for f in frequencies if f.imag > 0]
         if imaginary:
-            self._results["warnings"].append(
-                f"Found {len(imaginary)} imaginary frequencies"
-            )
+            self._results["warnings"].append(f"Found {len(imaginary)} imaginary frequencies")
             self._results["imaginary_frequencies"] = imaginary
 
         vib.clean()

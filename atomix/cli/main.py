@@ -261,7 +261,13 @@ def status(directory: str, job_id: str | None, scheduler: str) -> None:
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True), default=".")
-@click.option("--type", "-t", "calc_type", default="summary", help="Analysis type: summary, energy, forces, trajectory")
+@click.option(
+    "--type",
+    "-t",
+    "calc_type",
+    default="summary",
+    help="Analysis type: summary, energy, forces, trajectory",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
 def analyze(directory: str, calc_type: str, as_json: bool) -> None:
     """Analyze calculation outputs.
@@ -304,8 +310,7 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
                 }
             elif key == "trajectory":
                 json_results[key] = [
-                    {"formula": a.get_chemical_formula(), "n_atoms": len(a)}
-                    for a in value
+                    {"formula": a.get_chemical_formula(), "n_atoms": len(a)} for a in value
                 ]
             else:
                 json_results[key] = value
@@ -326,6 +331,7 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
 
         if results["forces"] is not None:
             import numpy as np
+
             max_force = np.max(np.abs(results["forces"]))
             click.echo(f"  Max force: {max_force:.4f} eV/Å")
 
@@ -353,6 +359,7 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
         click.echo(f"\n=== Force Analysis: {directory} ===\n")
         if results["forces"] is not None:
             import numpy as np
+
             forces = results["forces"]
             force_mags = np.linalg.norm(forces, axis=1)
             click.echo(f"  Number of atoms: {len(forces)}")
@@ -487,7 +494,9 @@ def init(output: str) -> None:
 @click.argument("directories", nargs=-1, type=click.Path(exists=True))
 @click.option("--slab", "-s", type=click.Path(exists=True), help="Slab calculation directory")
 @click.option("--slab-energy", "-E", type=float, help="Slab energy (eV) if known")
-@click.option("--gas-ref", "-g", type=click.Path(exists=True), help="Gas reference calculation directory")
+@click.option(
+    "--gas-ref", "-g", type=click.Path(exists=True), help="Gas reference calculation directory"
+)
 @click.option("--gas-energy", "-G", type=float, help="Gas reference energy (eV) if known")
 @click.option("--adsorbate", "-a", default="O", help="Adsorbate species name")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON")
@@ -601,6 +610,7 @@ def adsorption(
         click.echo(f"  Max E_ads: {max(valid_e_ads):.4f} eV")
         if len(valid_e_ads) > 1:
             import numpy as np
+
             click.echo(f"  Mean E_ads: {np.mean(valid_e_ads):.4f} eV")
 
 
@@ -661,12 +671,14 @@ def sites(
     if as_json:
         site_data = []
         for i, site in enumerate(found_sites):
-            site_data.append({
-                "index": i,
-                "type": site.site_type,
-                "position": site.position.tolist(),
-                "atoms_indices": site.atoms_indices,
-            })
+            site_data.append(
+                {
+                    "index": i,
+                    "type": site.site_type,
+                    "position": site.position.tolist(),
+                    "atoms_indices": site.atoms_indices,
+                }
+            )
         click.echo(json.dumps(site_data, indent=2))
         return
 
@@ -802,14 +814,16 @@ def screen(
     if as_json:
         json_results = []
         for r in results:
-            json_results.append({
-                "rank": r.rank,
-                "filename": r.metadata.get("filename", ""),
-                "energy": r.mlip_energy,
-                "selected": r.selected_for_dft,
-                "n_atoms": len(r.atoms),
-                "formula": r.atoms.get_chemical_formula(),
-            })
+            json_results.append(
+                {
+                    "rank": r.rank,
+                    "filename": r.metadata.get("filename", ""),
+                    "energy": r.mlip_energy,
+                    "selected": r.selected_for_dft,
+                    "n_atoms": len(r.atoms),
+                    "formula": r.atoms.get_chemical_formula(),
+                }
+            )
         click.echo(json.dumps(json_results, indent=2))
         return
 
@@ -1064,6 +1078,7 @@ def screen_sites(
     else:
         # Try as molecule formula
         from ase.build import molecule
+
         try:
             ads_atoms = molecule(adsorbate)
         except Exception:
@@ -1088,20 +1103,21 @@ def screen_sites(
     site_labels = [f"{s.site_type}_{i}" for i, s in enumerate(sites)]
 
     results = screening.screen_sites(
-        slab, ads_atoms, site_positions,
-        height=height, site_labels=site_labels
+        slab, ads_atoms, site_positions, height=height, site_labels=site_labels
     )
 
     if as_json:
         json_results = []
         for r in results:
-            json_results.append({
-                "rank": r.rank,
-                "site_label": r.metadata.get("site_label", ""),
-                "energy": r.mlip_energy,
-                "position": list(r.metadata.get("site", [])),
-                "selected": r.selected_for_dft,
-            })
+            json_results.append(
+                {
+                    "rank": r.rank,
+                    "site_label": r.metadata.get("site_label", ""),
+                    "energy": r.mlip_energy,
+                    "position": list(r.metadata.get("site", [])),
+                    "selected": r.selected_for_dft,
+                }
+            )
         click.echo(json.dumps(json_results, indent=2))
         return
 
@@ -1110,7 +1126,7 @@ def screen_sites(
     click.echo(f"  {'Rank':<6} {'Energy (eV)':<14} {'Site':<15} {'Position'}")
     click.echo("  " + "-" * 60)
 
-    for r in results[:top_n + 5]:  # Show a few more than top_n
+    for r in results[: top_n + 5]:  # Show a few more than top_n
         marker = "*" if r.selected_for_dft else " "
         site_label = r.metadata.get("site_label", "")[:14]
         energy_str = f"{r.mlip_energy:.4f}" if r.mlip_energy else "N/A"

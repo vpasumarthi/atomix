@@ -23,6 +23,7 @@ def temp_structure(tmp_path: Path) -> Path:
     """Create a temporary structure file."""
     atoms = bulk("Cu")
     from ase.io import write
+
     struct_path = tmp_path / "cu.vasp"
     write(str(struct_path), atoms, format="vasp")
     return struct_path
@@ -33,6 +34,7 @@ def temp_slab(tmp_path: Path) -> Path:
     """Create a temporary slab structure."""
     slab = fcc111("Cu", size=(2, 2, 3), vacuum=10.0)
     from ase.io import write
+
     slab_path = tmp_path / "slab.vasp"
     write(str(slab_path), slab, format="vasp")
     return slab_path
@@ -146,6 +148,7 @@ class TestScreenCommand:
 
         if result.exit_code == 0:
             import json
+
             # Should be valid JSON if successful
             try:
                 json.loads(result.output)
@@ -181,10 +184,7 @@ class TestTrainDataCommand:
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
 
-        result = runner.invoke(cli, [
-            "train-data", str(empty_dir),
-            "-o", str(tmp_path / "out.xyz")
-        ])
+        result = runner.invoke(cli, ["train-data", str(empty_dir), "-o", str(tmp_path / "out.xyz")])
 
         assert result.exit_code != 0
         assert "No valid calculation directories" in result.output
@@ -231,10 +231,7 @@ class TestScreenSitesCommand:
         }
         mock_get_calc.return_value = mock_calc
 
-        result = runner.invoke(cli, [
-            "screen-sites", str(temp_slab),
-            "-a", "O", "-n", "3"
-        ])
+        result = runner.invoke(cli, ["screen-sites", str(temp_slab), "-a", "O", "-n", "3"])
 
         # Should load slab and find sites
         assert "Loaded slab" in result.output or "Error" in result.output

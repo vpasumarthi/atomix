@@ -352,6 +352,7 @@ class VASPCalculator:
 
         # Copy CONTCAR to POSCAR
         import shutil
+
         shutil.copy(contcar, poscar)
         files["POSCAR"] = poscar
 
@@ -459,7 +460,4 @@ class VASPCalculator:
     def needs_restart(self) -> bool:
         """Check if calculation needs restart (incomplete but restartable)."""
         validation = self.validate_outputs()
-        return (
-            validation["status"] in ("incomplete", "failed")
-            and validation["can_restart"]
-        )
+        return validation["status"] in ("incomplete", "failed") and validation["can_restart"]

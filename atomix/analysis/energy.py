@@ -1,6 +1,5 @@
 """Energy analysis utilities for atomix."""
 
-
 from ase import Atoms
 
 
@@ -57,8 +56,7 @@ class EnergyAnalyzer:
         for element, count in element_counts.items():
             if element not in refs:
                 raise ValueError(
-                    f"No reference energy for element '{element}'. "
-                    f"Available: {list(refs.keys())}"
+                    f"No reference energy for element '{element}'. Available: {list(refs.keys())}"
                 )
             ref_energy_sum += count * refs[element]
 

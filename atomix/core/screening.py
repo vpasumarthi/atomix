@@ -275,7 +275,8 @@ class ScreeningWorkflow:
         min_energy = valid[0].mlip_energy
 
         return [
-            r for r in valid
+            r
+            for r in valid
             if r.mlip_energy is not None and r.mlip_energy - min_energy <= window  # type: ignore
         ]
 
@@ -313,8 +314,7 @@ class ScreeningWorkflow:
             - n_validated: Number of structures with DFT results
         """
         validated = [
-            r for r in self._results
-            if r.mlip_energy is not None and r.dft_energy is not None
+            r for r in self._results if r.mlip_energy is not None and r.dft_energy is not None
         ]
 
         if not validated:
@@ -494,11 +494,13 @@ class AdsorptionScreening:
                 structure.extend(ads)
 
             structures.append(structure)
-            metadata.append({
-                "n_adsorbates": len(sites),
-                "sites": sites,
-                "label": label,
-            })
+            metadata.append(
+                {
+                    "n_adsorbates": len(sites),
+                    "sites": sites,
+                    "label": label,
+                }
+            )
 
         workflow = ScreeningWorkflow(self.mlip, self.config)
         return workflow.screen(structures, metadata)

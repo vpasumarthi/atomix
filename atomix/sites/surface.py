@@ -1,6 +1,5 @@
 """Surface site identification for catalysis workflows."""
 
-
 import numpy as np
 from ase import Atoms
 from scipy.spatial import Delaunay
@@ -83,10 +82,7 @@ def find_surface_sites(
     # Handle periodic boundary conditions by replicating surface atoms
     replicated_points = []
     replicated_indices = []
-    shifts = [
-        (0, 0), (1, 0), (-1, 0), (0, 1), (0, -1),
-        (1, 1), (-1, -1), (1, -1), (-1, 1)
-    ]
+    shifts = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1)]
     for di, dj in shifts:
         shift = di * cell[0, :2] + dj * cell[1, :2]
         for local_idx, global_idx in enumerate(surface_indices):
@@ -139,8 +135,7 @@ def find_surface_sites(
 
         # Check if at least one vertex is from the original cell
         any_in_original = any(
-            replicated_indices[v][1] == 0 and replicated_indices[v][2] == 0
-            for v in simplex
+            replicated_indices[v][1] == 0 and replicated_indices[v][2] == 0 for v in simplex
         )
         if not any_in_original:
             continue
