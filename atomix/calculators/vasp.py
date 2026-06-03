@@ -238,11 +238,10 @@ class VASPCalculator:
                     # pymatgen Outcar stores forces internally
                     pass  # forces already parsed from vasprun if available
 
-                # Check for convergence indicators
-                if not results["converged"]:
-                    results["converged"] = outcar.converged
-
-                # Check for run stats (indicates completion)
+                # Outcar has no `converged` attribute (convergence lives on
+                # Vasprun). run_stats is populated only when VASP reached the
+                # end of execution, so treat its presence as the completion
+                # signal in this fallback path.
                 if outcar.run_stats:
                     results["converged"] = True
 
@@ -301,7 +300,9 @@ class VASPCalculator:
         if outcar_path.exists():
             try:
                 outcar = Outcar(str(outcar_path))
-                return outcar.converged or bool(outcar.run_stats)
+                # Outcar exposes run_stats (set on completion) but no
+                # `converged` attribute; use completion as the signal here.
+                return bool(outcar.run_stats)
             except Exception:
                 pass
 
