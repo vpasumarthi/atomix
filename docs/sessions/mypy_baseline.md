@@ -1,5 +1,5 @@
 ---
-summary: "Triaged mypy baseline from the v0.x quality pass. 2026-06-03 update: the 103 union-syntax errors and the Outcar.converged bug are resolved; 42 errors remain, triaged by module below."
+summary: "Triaged mypy baseline from the v0.x quality pass. 2026-06-24 pickup note: Ruff is clean after 684690b; source-only mypy baseline is 43 errors with --follow-imports=skip."
 read_when:
   - "starting a mypy / type-annotation cleanup task"
   - "touching structure-reading return types (Atoms vs list[Atoms])"
@@ -10,6 +10,40 @@ read_when:
 
 Generated during the mechanical quality pass on **2026-06-03**; refreshed the
 same day after two fixes landed.
+
+## Pickup Note — 2026-06-24
+
+Context: Ruff cleanup was completed and pushed in commit `684690b`
+(`style: satisfy ruff strict zip checks`). `ruff check . --no-cache` is now
+green and `pytest tests/` passes with 113 tests in the `atomix` conda env.
+
+Latest mypy spot checks:
+
+| Scope | Command | Result |
+|-------|---------|--------|
+| source + tests | `python -m mypy --show-error-codes atomix tests` | 70 errors, 17 files |
+| source only, documented baseline mode | `python -m mypy --show-error-codes --follow-imports=skip atomix` | 43 errors, 11 files |
+
+Interpretation: this is still essentially the known mypy baseline, not a
+regression from the Ruff cleanup. The +1 relative to the 2026-06-03 documented
+42-error baseline is the `yaml` missing-stubs warning surfacing in
+`atomix/core/config.py`.
+
+Recommended next pickup:
+
+1. Do a source-only mechanical pass first, using
+   `--follow-imports=skip atomix`, and avoid API-contract changes in that pass.
+2. Low-risk targets: annotate the `vasp.py` validation result container, add
+   the simple numeric accumulator annotations, cast/annotate NumPy/ASE/LLM
+   `Any` returns, fix the `adsorption.py` `list[int]`/`list[float]` return
+   mismatch, rename the confusing `selected` list in `screening.py`, and rename
+   the early `sites` accumulator in `surface.py`.
+3. Leave these for a separate decision pass: `BaseCalculation.setup()` return
+   contract, `JobSubmitter.submit()` base/subclass signatures, and the
+   `Atoms | list[Atoms]` structure-reading boundary in CLI/trajectory code.
+4. After source-only cleanup, decide whether tests should be included in the
+   mypy gate or tracked separately. The source+tests run currently adds
+   test-only typing debt, especially in `tests/test_mlip.py`.
 
 ## Update — 2026-06-03 (after fixes)
 
