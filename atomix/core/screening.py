@@ -5,8 +5,9 @@ numbers of candidate structures, then validate promising candidates
 with accurate DFT calculations.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from ase import Atoms
@@ -157,7 +158,7 @@ class ScreeningWorkflow:
 
         # Calculate energies with MLIP
         self._results = []
-        for atoms, meta in zip(structures, metadata):
+        for atoms, meta in zip(structures, metadata, strict=True):
             calc_result = self.mlip.calculate(atoms)
 
             result = ScreeningResult(
@@ -433,7 +434,7 @@ class AdsorptionScreening:
         structures = []
         metadata = []
 
-        for site, label in zip(sites, site_labels):
+        for site, label in zip(sites, site_labels, strict=True):
             # Create slab+adsorbate structure
             structure = slab.copy()
 
@@ -485,7 +486,7 @@ class AdsorptionScreening:
         structures = []
         metadata = []
 
-        for sites, label in zip(configurations, labels):
+        for sites, label in zip(configurations, labels, strict=True):
             structure = slab.copy()
 
             for site in sites:

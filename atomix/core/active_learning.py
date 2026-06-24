@@ -387,7 +387,7 @@ class ActiveLearningSelector:
         uncertainties = self.estimator.estimate_batch(candidates)
 
         scored = []
-        for atoms, unc in zip(candidates, uncertainties):
+        for atoms, unc in zip(candidates, uncertainties, strict=True):
             if metric == "energy":
                 score = unc["energy_std"]
             elif metric == "force":

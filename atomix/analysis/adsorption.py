@@ -90,7 +90,7 @@ class AdsorptionAnalyzer:
             gas_reference = self.gas_references[adsorbate]
 
         # Sort by number of adsorbates
-        sorted_pairs = sorted(zip(n_adsorbates, energies))
+        sorted_pairs = sorted(zip(n_adsorbates, energies, strict=True))
         n_sorted = [p[0] for p in sorted_pairs]
         e_sorted = [p[1] for p in sorted_pairs]
 
@@ -101,7 +101,7 @@ class AdsorptionAnalyzer:
         prev_energy = self.slab_energy
         prev_n = 0
 
-        for n, energy in zip(n_sorted, e_sorted):
+        for n, energy in zip(n_sorted, e_sorted, strict=True):
             if n == 0:
                 # Clean slab reference
                 average_e_ads.append(0.0)
