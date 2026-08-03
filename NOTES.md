@@ -18,7 +18,9 @@ Early scaffolding stage. Initial work toward Phases 1-4 (NL → VASP setup, calc
 | `atomix/analysis/` | TBD | May split basic vs advanced |
 | `atomix/ai/` | Proprietary | NL generation, premium feature |
 
-**Decision needed before**: First public release or external sharing.
+**Decision needed before**: First public release or external sharing. Also blocks `atomix-pypi-release/` cleanup (step 5 below).
+
+**Copyleft constraint on dependencies**: the open-core split above dies if atomix takes a GPL dependency. The echemdb toolchain (`unitpackage`, `svgdigitizer`, `metadata-schema`) is stated as GPL-3.0-or-later in the preprint, so importing `unitpackage` would likely force atomix to be GPL-compatible and rule out a proprietary `atomix/ai/`. Verify the actual `LICENSE` files on their repos before building on them, since papers state licenses loosely. Citing them costs nothing; depending on them has strings.
 
 **References**:
 - GitLab CE/EE model
@@ -32,6 +34,60 @@ Consider atomate2 + jobflow-remote instead of building custom job management. Ha
 - Custodian for auto-fixing VASP errors
 - MongoDB provenance database (queryable results)
 - Docs: https://materialsproject.github.io/atomate2/
+
+## Reference: echemdb architecture (reviewed 2026-08-03)
+
+Preprint: "echemdb: An Interfacial Electrochemistry Dataset of Fingerprint Cyclic Voltammograms for Single Crystal Electrodes", https://doi.org/10.26434/chemrxiv.15006518/v1 (posted 2026-07-24). Software credit is Hermann, Hörmann, Rüth, and Engstfeld. Reuter and Jacob are funding and review only, so do not read this as a Reuter-group architecture.
+
+Closest shipped example of the warehouse pattern in an adjacent domain. Worth copying the layering, not the storage choice.
+
+**How they split it.** Five repos, each separately installable, each with a Zenodo DOI:
+
+| Layer | Repo |
+|---|---|
+| Schema | `metadata-schema` |
+| Extraction | `svgdigitizer` |
+| Store + API | `unitpackage` |
+| Data | `electrochemistry-data` |
+| Surface | `website` (MkDocs, generated in CI from the store) |
+
+Schema and store ship as products independent of the data. The website is generated, never hand-maintained.
+
+**Take:**
+- Zenodo DOI per release. Citable without a journal, cheap now, and the one credibility mechanism available before adoption exists.
+- Generated docs surface driven by the store, not maintained separately.
+- Schema as its own versioned artifact rather than something embedded in the store code.
+
+**Reject:** their storage choice. They use file-based frictionless Data Packages (CSV plus JSON metadata) with a Python API on top. Portable, git-diffable, no infrastructure, but no query engine. The load-bearing atomix use case is a query ("what Pt(111) calculations have I run at 400 eV across all projects"), which argues for DuckDB/parquet or SQLite instead. Note this is a real alternative being declined, not an option that was never considered.
+
+**Positioning.** echemdb recovers *experimental* data from published literature. The preprint notes existing databases either extract summary values or store computationally generated data, and neither is their scope. The store for a researcher's own generated computational results is still empty, matching the earlier NovoMCP finding from a different direction.
+
+**Cost lesson.** About 350 entries from about 90 publications, manually digitized, 14 authors, with LLMs added as a preliminary metadata cross-check to speed curation. Curation-as-product is expensive. Atomix writes at calculation time from metadata already in the INCAR, so it avoids that cost entirely. This is the structural argument for the atomix approach.
+
+**Possible capability, if the store lands first:** compare a computed result against the echemdb reference for a given surface and electrolyte. One-sentence invocation, external data source, writes to the local store. Gated on the licensing question above.
+
+## Publishing atomix
+
+Recorded so the reasoning is not re-derived. Blocked on v0.2.0 either way.
+
+**Decide what the paper is for first. The two goals have different answers.**
+
+| Goal | Sequencing |
+|---|---|
+| Build a user base | Product first, paper documents it later |
+| Credential for job applications | Preprint as soon as v0.2.0 is real, adoption irrelevant |
+
+The second goal is the live one during the job search. A ChemRxiv or arXiv preprint plus a working PyPI package is a portfolio artifact on its own.
+
+**Why the paper does not drive adoption here.** Method software (MACE, NequIP) is different: the method is the contribution, so the paper creates the users. Infrastructure and wrapper software (ASE, pymatgen, phonopy) gets papers that document and give a citation for software people already use. ASE and phonopy both had years of users before their canonical papers. Atomix is currently the second kind.
+
+**Venues.** JOSS, SoftwareX, or J. Cheminformatics. JOSS fits and accepts solo-authored submissions, but screens against thin API clients and minor utility packages. A natural-language wrapper with nothing behind it is that profile, so JOSS needs real functionality first. A preprint has no such gate. Note the echemdb preprint uses Nature Scientific Data's template (Background & Summary, Usage Notes, Data/Code Availability), which is a data-descriptor format and not the model to copy for software.
+
+**Solo authorship is not the risk.** Phonopy and spglib were effectively one author for years. Credibility comes from adoption, docs, tests, and the problem being real.
+
+**The real risk is precedent.** PyCD was well engineered, tested, documented, and had a PhD and papers behind it, and still saw adoption by one student inside the group. A paper does not manufacture users.
+
+**Cheaper distribution than a paper**, available at v0.2.0: aimd-tutorial as a showcase (already planned), Psi-k, and direct network posts.
 
 ## Cleanup
 
