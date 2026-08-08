@@ -17,8 +17,8 @@ The useful product is not a chatbot demo. The useful product is a trustworthy wo
 - README states most features are still stubs.
 - A supported `inspect-vasp` CLI and Python API read segmented VASP outputs without modifying them.
 - The historical `atomix-pypi-release/` placeholder is preserved but excluded from package discovery.
-- The source version is `0.2.0`; its CI, wheel, clean install,
-  and read-only inspection path are verified.
+- `0.2.0` is published on PyPI and tagged `v0.2.0`; its CI, wheel, source
+  archive, clean PyPI install, and read-only inspection path are verified.
 - No license is declared for the current source. This does not technically
   block a PyPI release; licensing will be revisited as the product boundary
   becomes clearer.
@@ -212,7 +212,7 @@ Candidate tasks:
 | P0 | Preserve but exclude historical `atomix-pypi-release/` | L | light/agent | none | Done; artifact checker prevents regression. |
 | P0 | Move heavy dependencies behind optional extras/lazy imports | M | light | package convergence plan | Needed for minimal install. |
 | P0 | Add package build and fresh-venv smoke tests | M | light | dependency cleanup | Done; verifies the unreleased wheel install path. |
-| P0 | Finalize `0.2.0` version and release artifacts | S | light/network | green CI | Next release step. |
+| P0 | Finalize `0.2.0` version and release artifacts | S | light/network | green CI | Done. |
 | P0 | CLI surface audit: stable vs experimental | S | none/agent | none | Done; only `inspect-vasp` is documented as supported. |
 | P1 | Minimal end-to-end VASP setup example | M | light | CLI audit | First useful demo. |
 | P1 | Tests for static/relax/AIMD input generation | M | light | VASP defaults decision | Core trust-building. |
@@ -255,6 +255,6 @@ Acceptance:
 
 ## Recommended Next Task
 
-Finalize and publish `0.2.0`, then begin the `0.3.0` VASP-input contract:
-supported calculation types, schemas, conservative defaults, POTCAR boundary,
-dry-run behavior, and acceptance fixtures.
+Begin the `0.3.0` VASP-input contract: supported calculation types, schemas,
+conservative defaults, POTCAR boundary, dry-run behavior, and acceptance
+fixtures.

@@ -5,8 +5,8 @@
 Early scaffolding stage. Read-only segmented VASP inspection is the first
 supported capability. VASP setup, calculation management, analysis, MLIP, and
 natural-language scaffolding remain experimental and subject to API churn
-through the `0.x` series. The published PyPI `0.1.1` is only a name-claim
-placeholder; `0.2.0` is the first usable release target.
+through the `0.x` series. PyPI `0.2.0` is the first usable release; `0.1.1`
+is only the historical name-claim placeholder.
 
 ## Release policy
 
