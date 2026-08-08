@@ -12,6 +12,12 @@ from typing import TYPE_CHECKING
 
 _EXPORTS = {
     "VASPCalculator": "atomix.calculators.vasp",
+    "VASPFrame": "atomix.calculators.vasp_segments",
+    "VASPReadWarning": "atomix.calculators.vasp_segments",
+    "VASPSegment": "atomix.calculators.vasp_segments",
+    "VASPSegmentReader": "atomix.calculators.vasp_segments",
+    "VASPSegmentReadResult": "atomix.calculators.vasp_segments",
+    "VASPTextData": "atomix.calculators.vasp_segments",
     "MLIPCalculator": "atomix.calculators.mlip",
     "MACECalculator": "atomix.calculators.mlip",
     "NequIPCalculator": "atomix.calculators.mlip",
@@ -40,3 +46,11 @@ if TYPE_CHECKING:
         get_mlip_calculator,
     )
     from atomix.calculators.vasp import VASPCalculator
+    from atomix.calculators.vasp_segments import (
+        VASPFrame,
+        VASPReadWarning,
+        VASPSegment,
+        VASPSegmentReader,
+        VASPSegmentReadResult,
+        VASPTextData,
+    )
