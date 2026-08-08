@@ -13,7 +13,8 @@ The useful product is not a chatbot demo. The useful product is a trustworthy wo
 - Early scaffolding exists for CLI commands, VASP input generation, calculation classes, workflow orchestration, site tools, analysis helpers, MLIP wrappers, and AI generation.
 - CI and tests exist.
 - README states most features are still stubs.
-- `NOTES.md` identifies the main release blocker: converge the main repo with the temporary `atomix-pypi-release/` placeholder before v0.2.0.
+- A supported `inspect-vasp` CLI and Python API read segmented VASP outputs without modifying them.
+- The historical `atomix-pypi-release/` placeholder is preserved but excluded from package discovery.
 - Licensing is undecided before public release or external sharing.
 - API churn is expected through v0.2.0.
 
@@ -51,9 +52,10 @@ Acceptance:
 - [x] Minimal install works without heavy optional dependencies.
 - [x] `atomix --help` and a basic info/help command work from a fresh environment.
 - [ ] Optional extras for MLIP, LLM, and dev install cleanly. (Restructured: heavy deps moved to a new `science` extra; a clean-venv `pip install .[all]` has not yet been re-exercised.)
-- [ ] `atomix-pypi-release/` is deleted or explicitly archived after convergence. (Now blocked only on the license: the sole LICENSE file lives inside the slim dir.)
+- [x] `atomix-pypi-release/` is explicitly marked historical and excluded from current builds.
 - [ ] License decision is recorded before public release. (Deferred 2026-06-02.)
 - [x] `pytest tests/` passes.
+- [x] Built wheel contents and a fresh wheel installation are checked in CI.
 
 ### M1 - VASP Setup MVP
 
@@ -112,9 +114,9 @@ Acceptance:
 Goal: make atomix installable, testable, and releasable from one source tree.
 
 Candidate tasks:
-- Converge `atomix-pypi-release/` into the main package and remove the duplicate pyproject (`P0`, `size:L`, `type:maintenance`, `area:package`, `compute:light`).
+- Keep `atomix-pypi-release/` as a read-only historical snapshot excluded from package discovery (`done`).
 - Move heavy dependencies to optional extras and lazy imports where needed (`P0`, `size:M`, `type:maintenance`, `area:package`, `compute:light`).
-- Add package build and fresh-venv install smoke tests (`P0`, `size:M`, `type:infra`, `area:ci`, `compute:light`).
+- Maintain package build and fresh-venv install smoke tests (`done`).
 - Record license decision for v0.2.0 (`P0`, `size:S`, `type:decision`, `area:license`, `compute:none`).
 
 ### Epic: CLI And User Workflows
@@ -177,11 +179,11 @@ Candidate tasks:
 
 | Priority | Task | Size | Compute | Depends On | Notes |
 |---|---|---|---|---|---|
-| P0 | Converge `atomix-pypi-release/` into main package | L | light/agent | none | Release blocker from `NOTES.md`; do as a discrete task. |
+| P0 | Preserve but exclude historical `atomix-pypi-release/` | L | light/agent | none | Done; artifact checker prevents regression. |
 | P0 | Move heavy dependencies behind optional extras/lazy imports | M | light | package convergence plan | Needed for minimal install. |
-| P0 | Add package build and fresh-venv smoke tests | M | light | dependency cleanup | Verifies v0.2.0 install path. |
+| P0 | Add package build and fresh-venv smoke tests | M | light | dependency cleanup | Done; verifies the unreleased wheel install path. |
 | P0 | Record license decision | S | none | user decision | Needed before public release/external sharing. |
-| P0 | CLI surface audit: stable vs experimental | S | none/agent | none | Prevents accidental overcommitment in README/docs. |
+| P0 | CLI surface audit: stable vs experimental | S | none/agent | none | Done; only `inspect-vasp` is documented as supported. |
 | P1 | Minimal end-to-end VASP setup example | M | light | CLI audit | First useful demo. |
 | P1 | Tests for static/relax/AIMD input generation | M | light | VASP defaults decision | Core trust-building. |
 | P1 | Direct mode vs file mode docs/tests | S | light | none | Clarifies workflow model. |
@@ -191,31 +193,6 @@ Candidate tasks:
 | P2 | Real MLIP screening example | M | gpu/network | optional deps stable | Later, after package cleanup. |
 
 ## Ready-To-Delegate Tasks
-
-### v0.2.0 Package Convergence Plan
-
-Labels: `priority:P0`, `size:M`, `type:audit`, `area:package`, `compute:agent`
-
-Goal: produce a concrete implementation plan for removing `atomix-pypi-release/` without breaking the PyPI name-claim use case.
-
-Acceptance:
-- [ ] Compare root `pyproject.toml` and `atomix-pypi-release/pyproject.toml`.
-- [ ] Identify imports that force heavy dependencies at import time.
-- [ ] List exact code changes needed for lazy imports and extras.
-- [ ] Define minimal fresh-venv smoke tests.
-- [ ] Do not delete `atomix-pypi-release/` in the planning task.
-
-### CLI Surface Audit
-
-Labels: `priority:P0`, `size:S`, `type:audit`, `area:cli`, `compute:agent`
-
-Goal: map current CLI commands to stable, experimental, or stub status.
-
-Acceptance:
-- [ ] List all current CLI commands.
-- [ ] For each command, record whether tests exist and whether it is safe to document as supported.
-- [ ] Identify the smallest stable CLI for v0.2.0.
-- [ ] Recommend README wording that avoids overclaiming.
 
 ### atomate2/jobflow-remote Evaluation
 
@@ -248,4 +225,6 @@ Acceptance:
 
 ## Recommended Next Task
 
-Start with **P0: v0.2.0 package convergence plan**. It is the main release blocker already identified in `NOTES.md`, and it should happen before adding more features.
+Exercise `atomix inspect-vasp` on additional real segmented calculations and
+refine only the summary fields that prove useful. Keep publication blocked
+until the product boundary and license are deliberately chosen.

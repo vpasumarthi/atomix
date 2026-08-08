@@ -1,3 +1,9 @@
+# Historical Atomix 0.1.1 placeholder
+
+> This directory is the preserved source of the MIT-licensed PyPI name-claim
+> release from April 2026. It is excluded from current package builds and is
+> not an authoritative package configuration. Do not update it for new work.
+
 # atomix
 
 **Atomistic Modeling Interface for eXploration**

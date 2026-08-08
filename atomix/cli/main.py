@@ -4,9 +4,11 @@ from pathlib import Path
 
 import click
 
+from atomix import __version__
+
 
 @click.group()
-@click.version_option()
+@click.version_option(version=__version__)
 def cli() -> None:
     """atomix: Atomistic Modeling Interface for eXploration.
 
@@ -18,16 +20,95 @@ def cli() -> None:
 @cli.command()
 def info() -> None:
     """Show atomix information."""
-    from atomix import __version__
-
     click.echo(f"atomix version {__version__}")
     click.echo("\nStatus: Alpha - Under active development")
-    click.echo("\nTarget applications:")
-    click.echo("  - VASP DFT calculations")
-    click.echo("  - Machine learning interatomic potentials (MACE, NequIP)")
-    click.echo("  - Catalysis and surface chemistry workflows")
-    click.echo("  - Atomistic simulation automation")
-    click.echo("\nFull features coming in v0.2.0+")
+    click.echo("\nSupported now:")
+    click.echo("  - Read-only inspection of segmented VASP calculations")
+    click.echo("\nOther commands remain experimental.")
+
+
+@cli.command("inspect-vasp")
+@click.argument(
+    "directory",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+)
+@click.option("--json", "as_json", is_flag=True, help="Output the complete summary as JSON")
+@click.option("--diagnostics", is_flag=True, help="List diagnostics in human-readable output")
+def inspect_vasp(directory: Path, as_json: bool, diagnostics: bool) -> None:
+    """Inspect a read-only VASP calculation stored in numbered segments.
+
+    DIRECTORY may contain seg01, seg02, ... seg100 directories or one
+    unsegmented set of VASP outputs. Calculation files are never modified.
+    """
+    import json
+    from collections import Counter
+
+    from atomix.calculators import VASPSegmentReader
+
+    result = VASPSegmentReader(directory).read()
+    source_counts = Counter(frame.source_kind for frame in result.frames)
+    times = [frame.time_fs for frame in result.frames if frame.time_fs is not None]
+    warning_count = sum(warning.level == "warning" for warning in result.warnings)
+    error_count = sum(warning.level == "error" for warning in result.warnings)
+
+    summary = {
+        "directory": str(directory.resolve()),
+        "segments": [
+            {
+                "number": segment.number,
+                "directory": str(segment.directory),
+            }
+            for segment in result.segments
+        ],
+        "segment_count": len(result.segments),
+        "frame_count": len(result.frames),
+        "frame_sources": dict(sorted(source_counts.items())),
+        "outcar_count": len(result.outcar_data),
+        "report_count": len(result.report_data),
+        "time_range_fs": [min(times), max(times)] if times else None,
+        "warning_count": warning_count,
+        "error_count": error_count,
+        "diagnostics": [
+            {
+                "level": warning.level,
+                "code": warning.code,
+                "message": warning.message,
+                "segment_number": warning.segment_number,
+                "path": str(warning.path) if warning.path is not None else None,
+                "related_paths": [str(path) for path in warning.related_paths],
+            }
+            for warning in result.warnings
+        ],
+    }
+
+    if as_json:
+        click.echo(json.dumps(summary, indent=2))
+    else:
+        segment_numbers = [segment.number for segment in result.segments]
+        segment_label = ", ".join(
+            "root" if number is None else str(number) for number in segment_numbers
+        )
+        source_label = ", ".join(
+            f"{source}: {count}" for source, count in sorted(source_counts.items())
+        )
+        click.echo(f"Calculation: {summary['directory']}")
+        click.echo(f"Segments: {summary['segment_count']} ({segment_label or 'none'})")
+        click.echo(f"Frames: {summary['frame_count']} ({source_label or 'none'})")
+        click.echo(f"OUTCAR files: {summary['outcar_count']}")
+        click.echo(f"REPORT files: {summary['report_count']}")
+        if times:
+            click.echo(f"Cumulative time: {min(times):g} to {max(times):g} fs")
+        else:
+            click.echo("Cumulative time: unavailable")
+        click.echo(f"Diagnostics: {warning_count} warnings, {error_count} errors")
+
+        if diagnostics:
+            for warning in result.warnings:
+                location = f" ({warning.path})" if warning.path is not None else ""
+                click.echo(f"  [{warning.level}] {warning.code}{location}: {warning.message}")
+
+    if result.has_errors:
+        raise click.exceptions.Exit(1)
 
 
 @cli.command()
@@ -332,7 +413,7 @@ def analyze(directory: str, calc_type: str, as_json: bool) -> None:
         if results["forces"] is not None:
             import numpy as np
 
-            max_force = np.max(np.abs(results["forces"]))
+            max_force: float = float(np.max(np.abs(results["forces"])))
             click.echo(f"  Max force: {max_force:.4f} eV/Å")
 
         if results["errors"]:

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atomix"
-version = "0.1.1"
-description = "Atomistic Modeling Interface for eXploration - Natural language driven toolkit for ab initio / DFT / atomistic modeling workflows"
+dynamic = ["version"]
+description = "Read-only VASP workflow inspection and experimental atomistic modeling tools"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
@@ -26,6 +26,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -46,6 +47,8 @@ science = [
     "pyyaml>=6.0",
     "requests>=2.28.0",
 ]
+# MACE is the currently packaged MLIP backend. The NequIP wrapper remains
+# experimental until it is migrated to NequIP's post-0.7 API.
 mlip = [
     "mace-torch>=0.3.0",
     "torch>=2.0.0",
@@ -55,6 +58,7 @@ llm = [
     "anthropic>=0.18.0",
 ]
 dev = [
+    "build>=1.2.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
@@ -75,7 +79,13 @@ Repository = "https://github.com/vpasumarthi/atomix"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["atomix*"]
+include = ["atomix", "atomix.*"]
+
+[tool.setuptools.package-data]
+"atomix.ai" = ["docs/*.md"]
+
+[tool.setuptools.dynamic]
+version = {attr = "atomix.__version__"}
 
 [tool.ruff]
 line-length = 100
