@@ -2,13 +2,19 @@
 
 ## Current State
 
-Early scaffolding stage. Initial work toward Phases 1-4 (NL → VASP setup, calculation management, analysis pipeline, MLIP integration) is in the source tree but unstable, untested at scale, and subject to API churn through v0.2.0. The published PyPI release (`pip install atomix`) is a minimal placeholder, not the full toolkit. Real first usable release targeted for v0.2.0.
+Early scaffolding stage. Read-only segmented VASP inspection is the first
+supported capability. VASP setup, calculation management, analysis, MLIP, and
+natural-language scaffolding remain experimental and subject to API churn
+through the `0.x` series. The published PyPI `0.1.1` is only a name-claim
+placeholder; `0.2.0` is the first usable release target.
 
-## Release gate
+## Release policy
 
-Do not publish a substantive package release until the product boundary and
-license are deliberately chosen. The historical PyPI placeholder does not
-define the license of the current top-level source tree.
+The current top-level source declares no license. This does not technically
+block a PyPI release; it means no general reuse or redistribution permission is
+granted. Revisit licensing when the product boundary and likely proprietary
+extensions are clearer. The historical PyPI placeholder remains a separate
+MIT-licensed `0.1.1` artifact.
 
 ## Computation Backend
 
@@ -90,6 +96,6 @@ Convergence steps:
    package discovery. README installation instructions now reference extras.
 6. [DONE 2026-08-08] Add a built-wheel content check, fresh wheel-install CI
    smoke test, packaged AI reference documents, and the supported
-   `inspect-vasp` command. The unreleased source version is `0.2.0.dev0`.
+   `inspect-vasp` command. The source version is `0.2.0`.
 
 Do this as a discrete prep step, not bundled with v0.2.0 feature work.

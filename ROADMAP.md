@@ -1,6 +1,8 @@
 # atomix Roadmap
 
-This roadmap keeps atomix easy to resume. It turns the project vision into milestones, epics, and issue-sized tasks with priorities, sizes, dependencies, and compute needs.
+This roadmap defines what each Atomix release must deliver. A minor release adds
+one end-to-end capability. Patch releases contain compatible fixes, docs, and
+small refinements.
 
 ## Product Goal
 
@@ -15,12 +17,16 @@ The useful product is not a chatbot demo. The useful product is a trustworthy wo
 - README states most features are still stubs.
 - A supported `inspect-vasp` CLI and Python API read segmented VASP outputs without modifying them.
 - The historical `atomix-pypi-release/` placeholder is preserved but excluded from package discovery.
-- Licensing is undecided before public release or external sharing.
-- API churn is expected through v0.2.0.
+- The source version is `0.2.0`; its CI, wheel, clean install,
+  and read-only inspection path are verified.
+- No license is declared for the current source. This does not technically
+  block a PyPI release; licensing will be revisited as the product boundary
+  becomes clearer.
+- API churn is expected throughout the `0.x` series.
 
 ## Priority Scale
 
-- `P0`: required before v0.2.0 is trustworthy or releasable.
+- `P0`: required for the next planned release.
 - `P1`: core MVP functionality for real local use.
 - `P2`: expansion after core workflows are stable.
 - `P3`: later research/product ideas.
@@ -41,71 +47,95 @@ The useful product is not a chatbot demo. The useful product is a trustworthy wo
 - `compute:gpu`: MLIP screening or training/inference that needs GPU.
 - `compute:agent`: good candidate for a separate agent chat.
 
-## Milestones
+## Release ladder
 
-### M0 - v0.2.0 Release Foundation
+```mermaid
+flowchart LR
+    V02["0.2<br/>Inspect"] --> V03["0.3<br/>Generate"]
+    V03 --> V04["0.4<br/>Manage"]
+    V04 --> V05["0.5<br/>Catalog"]
+    V05 --> V06["0.6<br/>Catalysis"]
+    V06 --> V07["0.7<br/>MLIP"]
+    V07 --> V08["0.8<br/>Natural language"]
+    V08 --> V10["1.0<br/>Stable system"]
+```
 
-Outcome: atomix has one authoritative package configuration, predictable installs, clear licensing direction, and a clean release boundary.
+### 0.2.0 - Inspect existing VASP runs
 
-Acceptance:
-- [x] Main repo can build a wheel from the root.
-- [x] Minimal install works without heavy optional dependencies.
-- [x] `atomix --help` and a basic info/help command work from a fresh environment.
-- [ ] Optional extras for MLIP, LLM, and dev install cleanly. (Restructured: heavy deps moved to a new `science` extra; a clean-venv `pip install .[all]` has not yet been re-exercised.)
-- [x] `atomix-pypi-release/` is explicitly marked historical and excluded from current builds.
-- [ ] License decision is recorded before public release. (Deferred 2026-06-02.)
-- [x] `pytest tests/` passes.
-- [x] Built wheel contents and a fresh wheel installation are checked in CI.
+Outcome: read segmented VASP calculations without modifying them.
 
-### M1 - VASP Setup MVP
+- [x] Numeric segment discovery, provenance, time metadata, and boundary-frame handling.
+- [x] XDATCAR trajectory with OUTCAR fallback and REPORT/OUTCAR diagnostics.
+- [x] Supported `atomix inspect-vasp` CLI and Python API.
+- [x] Tests pass on Python 3.10-3.13; wheel and clean installation pass in CI.
 
-Outcome: a user can create a small VASP calculation setup from a structure and structured or natural-language input, then inspect the generated files before running anything.
+### 0.3.0 - Generate safe VASP inputs
 
-Acceptance:
-- [ ] `atomix generate ... --dry-run` gives useful validation output.
-- [ ] Generation with a provided structure writes POSCAR, INCAR, KPOINTS, and job script where appropriate.
-- [ ] VASP defaults are documented and test-covered.
-- [ ] Missing structure, missing POTCAR assumptions, and unsupported requests fail clearly.
-- [ ] No real cluster submission is required for this milestone.
+Outcome: create inspectable inputs for supported calculation types without
+submitting a job.
 
-### M2 - Calculation Management MVP
+- [ ] Support static, relaxation, and AIMD input schemas.
+- [ ] `atomix generate --dry-run` validates and previews all intended files.
+- [ ] Write POSCAR, INCAR, KPOINTS, and an optional scheduler script only after validation.
+- [ ] Document conservative defaults, POTCAR boundaries, and unsupported requests.
+- [ ] Cover each supported calculation type with deterministic tests and one end-to-end example.
 
-Outcome: atomix can manage a calculation directory enough to submit, status-check, and parse simple results.
+### 0.4.0 - Manage calculation execution
 
-Acceptance:
-- [ ] `atomix submit --dry-run` produces scheduler scripts for Slurm without submitting.
-- [ ] `atomix status` recognizes not-started, running/incomplete, completed, and failed directories from file evidence.
-- [ ] `atomix analyze` returns useful summary/energy/forces output.
-- [ ] File-based mode and direct ASE/MLIP mode have clear boundaries.
+Outcome: submit, monitor, continue, and diagnose a VASP calculation.
 
-### M3 - Catalysis Workflow MVP
+- [ ] Choose the job-management boundary after evaluating atomate2/jobflow-remote.
+- [ ] Generate Slurm submissions with a no-submit dry run.
+- [ ] Classify not-started, running, incomplete, completed, and failed calculations.
+- [ ] Handle segmented continuation without losing provenance.
+- [ ] Return structured energy, force, and failure summaries.
 
-Outcome: atomix can support common surface science workflows beyond generic calculation setup.
+### 0.5.0 - Catalog and query results
 
-Acceptance:
-- [ ] Surface slab/site helpers cover top/bridge/hollow style enumeration for a simple metal slab.
-- [ ] Adsorption energy workflow is documented and test-covered with mock or lightweight calculators.
-- [ ] Example workflow exists for a small surface adsorption case.
+Outcome: answer questions across calculation directories from a local,
+queryable record.
 
-### M4 - MLIP Screening And Active Learning
+- [ ] Define a versioned calculation and result schema.
+- [ ] Index existing runs without changing source calculation directories.
+- [ ] Query structures, methods, parameters, status, energies, and provenance.
+- [ ] Export portable tabular or columnar records with a documented migration path.
 
-Outcome: atomix can run MLIP-first screening workflows and export reference data for later validation/fine-tuning.
+### 0.6.0 - Catalysis workflows
 
-Acceptance:
-- [ ] MLIP calculator wrappers are lazy-loaded and optional.
-- [ ] `screen` and `screen-sites` commands work with mocked calculators in tests and documented real backends.
-- [ ] Training-data export from DFT output directories has a tested schema.
-- [ ] Active-learning helper boundaries are defined.
+Outcome: provide tested surface-science workflows beyond generic setup.
 
-### M5 - Natural Language Layer
+- [ ] Enumerate common adsorption sites for simple metal slabs.
+- [ ] Implement and document an adsorption-energy workflow.
+- [ ] Validate one complete lightweight surface-adsorption example.
 
-Outcome: natural language becomes a reliable interface over the workflow primitives, not a separate fragile system.
+### 0.7.0 - MLIP screening and export
 
-Acceptance:
-- [ ] Prompt/context docs are versioned and testable.
-- [ ] Generated calculation parameters are validated before writing files.
-- [ ] Provider failures degrade with clear errors.
-- [ ] Example prompts map to deterministic expected parameter schemas in tests.
+Outcome: use optional MLIP backends for screening and prepare reference data
+for validation or fine-tuning.
+
+- [ ] Keep MLIP backends optional and import-safe.
+- [ ] Test screening commands with mocks and document at least one real backend.
+- [ ] Export VASP-derived training data through a tested schema.
+- [ ] Define, but do not over-automate, active-learning boundaries.
+
+### 0.8.0 - Validated natural-language interface
+
+Outcome: natural language controls trusted workflow primitives through typed,
+validated requests.
+
+- [ ] Map prompts to versioned parameter schemas before any file write.
+- [ ] Add deterministic fixture tests and clear provider-failure behavior.
+- [ ] Require an inspectable plan or dry run for consequential operations.
+
+### 1.0.0 - Stable end-to-end system
+
+Outcome: a documented and compatibility-managed workflow from setup through
+execution, inspection, provenance, analysis, and optional natural-language use.
+
+- [ ] Public CLI and Python APIs have an explicit compatibility policy.
+- [ ] Core workflows are proven on multiple real calculation families.
+- [ ] Installation, upgrades, data migration, and failure recovery are documented.
+- [ ] Release scope, license, and support boundary are deliberate and explicit.
 
 ## Epics
 
@@ -117,7 +147,7 @@ Candidate tasks:
 - Keep `atomix-pypi-release/` as a read-only historical snapshot excluded from package discovery (`done`).
 - Move heavy dependencies to optional extras and lazy imports where needed (`P0`, `size:M`, `type:maintenance`, `area:package`, `compute:light`).
 - Maintain package build and fresh-venv install smoke tests (`done`).
-- Record license decision for v0.2.0 (`P0`, `size:S`, `type:decision`, `area:license`, `compute:none`).
+- Revisit licensing when the product boundary or proprietary extension path changes (`P2`, `size:S`, `type:decision`, `area:license`, `compute:none`).
 
 ### Epic: CLI And User Workflows
 
@@ -133,7 +163,7 @@ Candidate tasks:
 Goal: generate conservative, inspectable VASP inputs using established libraries.
 
 Candidate tasks:
-- Define supported calculation types and default parameters for v0.2.0 (`P1`, `size:S`, `type:decision`, `area:vasp`, `compute:none`).
+- Define supported calculation types and default parameters for `0.3.0` (`P0`, `size:S`, `type:decision`, `area:vasp`, `compute:none`).
 - Add tests for static, relax, and AIMD input generation (`P1`, `size:M`, `type:test`, `area:vasp`, `compute:light`).
 - Document POTCAR handling and what atomix does not automate (`P1`, `size:S`, `type:docs`, `area:vasp`, `compute:none`).
 
@@ -182,7 +212,7 @@ Candidate tasks:
 | P0 | Preserve but exclude historical `atomix-pypi-release/` | L | light/agent | none | Done; artifact checker prevents regression. |
 | P0 | Move heavy dependencies behind optional extras/lazy imports | M | light | package convergence plan | Needed for minimal install. |
 | P0 | Add package build and fresh-venv smoke tests | M | light | dependency cleanup | Done; verifies the unreleased wheel install path. |
-| P0 | Record license decision | S | none | user decision | Needed before public release/external sharing. |
+| P0 | Finalize `0.2.0` version and release artifacts | S | light/network | green CI | Next release step. |
 | P0 | CLI surface audit: stable vs experimental | S | none/agent | none | Done; only `inspect-vasp` is documented as supported. |
 | P1 | Minimal end-to-end VASP setup example | M | light | CLI audit | First useful demo. |
 | P1 | Tests for static/relax/AIMD input generation | M | light | VASP defaults decision | Core trust-building. |
@@ -198,12 +228,12 @@ Candidate tasks:
 
 Labels: `priority:P1`, `size:M`, `type:research`, `area:workflow`, `compute:agent`
 
-Goal: decide whether atomix should wrap atomate2/jobflow-remote instead of building custom job-management layers.
+Goal: decide whether Atomix `0.4.0` should wrap atomate2/jobflow-remote instead of building custom job-management layers.
 
 Acceptance:
 - [ ] Compare current atomix job/workflow code to atomate2/jobflow-remote capabilities.
 - [ ] Identify overlap, gaps, and migration risk.
-- [ ] Recommend whether v0.2.0 should depend on, wrap, or defer atomate2/jobflow.
+- [ ] Recommend whether `0.4.0` should depend on, wrap, or defer atomate2/jobflow.
 
 ## Later
 
@@ -225,6 +255,6 @@ Acceptance:
 
 ## Recommended Next Task
 
-Exercise `atomix inspect-vasp` on additional real segmented calculations and
-refine only the summary fields that prove useful. Keep publication blocked
-until the product boundary and license are deliberately chosen.
+Finalize and publish `0.2.0`, then begin the `0.3.0` VASP-input contract:
+supported calculation types, schemas, conservative defaults, POTCAR boundary,
+dry-run behavior, and acceptance fixtures.

@@ -55,7 +55,7 @@ jobs:
           python -m build
 
       - name: Check wheel contents
-        run: python scripts/check_release_artifact.py dist/*.whl
+        run: python scripts/check_release_artifact.py dist/*
 
       - name: Test installed wheel
         run: |
